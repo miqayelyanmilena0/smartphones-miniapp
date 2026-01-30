@@ -45,16 +45,17 @@ const adsList = document.getElementById('adsList');
 const API_URL = "https://script.google.com/macros/s/AKfycbx0b-ZdTxbKFmWNmq9CFdef3CPz-B4BStag6Cjfd__7pI6bfQBADpsOwAT7V7meuzyM_A/exec"; //
 
 function fetchAds() {
-  fetch(API_URL)
-    .then(res => res.json())
-    .then(data => {
-      adsList.innerHTML = '';
-      data.forEach(ad => {
-        const li = document.createElement('li');
-        li.textContent = `${ad.title} — ${ad.price} ₽ — ${ad.district}`;
-        adsList.appendChild(li);
-      });
-    });
+  fetch(API_URL, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    title,
+    price,
+    district
+  })
+})
 }
 
 adForm.addEventListener('submit', function(e){
