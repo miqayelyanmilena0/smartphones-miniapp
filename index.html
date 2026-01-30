@@ -1,20 +1,71 @@
-<!DOCTYPE html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Смартфоны Москва</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title></title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="2113.6">
+  <style type="text/css">
+    p.p2 {margin: 0.0px 0.0px 12.0px 0.0px; font: 12.0px Times; color: #000000; -webkit-text-stroke: #000000}
+    p.p3 {margin: 0.0px 0.0px 0.0px 0.0px; font: 11.0px 'Helvetica Neue'; color: #000000; color: rgba(0, 0, 0, 0.85); -webkit-text-stroke: rgba(0, 0, 0, 0.85)}
+    span.s1 {font-kerning: none}
+    span.s2 {font-kerning: none; background-color: #b3b3b3}
+    span.s3 {font: 12.0px Times; font-kerning: none; color: #000000; -webkit-text-stroke: 0px #000000}
+  </style>
 </head>
 <body>
   <h2>Смартфоны в Москве</h2>
-  <p>Продай или купи смартфон рядом с тобой</p>
+  <p>Размести объявление о смартфоне:</p>
 
-  <button onclick="alert('Скоро')">Разместить объявление</button>
+  <form id="adForm">
+    <label>Название смартфона:</label><br>
+    <input type="text" id="title" required><br><br>
+
+    <label>Цена (₽):</label><br>
+    <input type="number" id="price" required><br><br>
+
+    <label>Район:</label><br>
+    <input type="text" id="district" required><br><br>
+
+    <button type="submit">Разместить</button>
+  </form>
+
+  <h3>Объявления:</h3>
+  <ul id="adsList"></ul>
 
   <script>
     const tg = window.Telegram.WebApp;
     tg.ready();
     tg.expand();
+
+    const adForm = document.getElementById('adForm');
+    const adsList = document.getElementById('adsList');
+    let ads = []; // сюда будут сохраняться объявления
+
+    adForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const title = document.getElementById('title').value;
+      const price = document.getElementById('price').value;
+      const district = document.getElementById('district').value;
+
+      const ad = {title, price, district};
+      ads.push(ad);
+
+      renderAds();
+
+      adForm.reset();
+    });
+
+    function renderAds() {
+      adsList.innerHTML = '';
+      ads.forEach(ad => {
+        const li = document.createElement('li');
+        li.textContent = `${ad.title} — ${ad.price} ₽ — ${ad.district}`;
+        adsList.appendChild(li);
+      });
+    }
   </script>
 </body>
 </html>
