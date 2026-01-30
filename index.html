@@ -35,48 +35,52 @@
   <ul id="adsList"></ul>
 
   <script>
-    const tg = window.Telegram.WebApp;
+const tg = window.Telegram.WebApp;
 tg.ready();
 tg.expand();
 
 const adForm = document.getElementById('adForm');
 const adsList = document.getElementById('adsList');
 
-const API_URL = "https://script.google.com/macros/s/AKfycbx0b-ZdTxbKFmWNmq9CFdef3CPz-B4BStag6Cjfd__7pI6bfQBADpsOwAT7V7meuzyM_A/exec"; //
+const API_URL = "https://script.google.com/macros/s/AKfycbx0b-ZdTxbKFmWNmq9CFdef3CPz-B4BStag6Cjfd__7pI6bfQBADpsOwAT7V7meuzyM_A/exec";
 
+// 👉 ПОЛУЧАЕМ объявления
 function fetchAds() {
-  fetch(API_URL, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({
-    title,
-    price,
-    district
-  })
-})
+  fetch(API_URL)
+    .then(res => res.json())
+    .then(data => {
+      adsList.innerHTML = "";
+      data.forEach(ad => {
+        const li = document.createElement("li");
+        li.textContent = `${ad.title} — ${ad.price} ₽ — ${ad.district}`;
+        adsList.appendChild(li);
+      });
+    });
 }
 
-adForm.addEventListener('submit', function(e){
+// 👉 ОТПРАВЛЯЕМ объявление
+adForm.addEventListener("submit", function(e) {
   e.preventDefault();
-  const title = document.getElementById('title').value;
-  const price = document.getElementById('price').value;
-  const district = document.getElementById('district').value;
+
+  const title = document.getElementById("title").value;
+  const price = document.getElementById("price").value;
+  const district = document.getElementById("district").value;
 
   fetch(API_URL, {
     method: "POST",
-    body: JSON.stringify({title, price, district})
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ title, price, district })
   })
-  .then(res => res.json())
-  .then(data => {
+  .then(() => {
     adForm.reset();
     fetchAds();
   });
 });
 
-// Загружаем объявления при открытии приложения
+// Загружаем объявления при открытии
 fetchAds();
-  </script>
+</script>
 </body>
 </html>
