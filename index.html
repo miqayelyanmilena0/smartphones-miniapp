@@ -36,36 +36,46 @@
 
   <script>
     const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand();
+tg.ready();
+tg.expand();
 
-    const adForm = document.getElementById('adForm');
-    const adsList = document.getElementById('adsList');
-    let ads = []; // сюда будут сохраняться объявления
+const adForm = document.getElementById('adForm');
+const adsList = document.getElementById('adsList');
 
-    adForm.addEventListener('submit', function(e) {
-      e.preventDefault();
+const API_URL = "https://script.google.com/macros/s/AKfycbx0b-ZdTxbKFmWNmq9CFdef3CPz-B4BStag6Cjfd__7pI6bfQBADpsOwAT7V7meuzyM_A/exec"; //
 
-      const title = document.getElementById('title').value;
-      const price = document.getElementById('price').value;
-      const district = document.getElementById('district').value;
-
-      const ad = {title, price, district};
-      ads.push(ad);
-
-      renderAds();
-
-      adForm.reset();
-    });
-
-    function renderAds() {
+function fetchAds() {
+  fetch(API_URL)
+    .then(res => res.json())
+    .then(data => {
       adsList.innerHTML = '';
-      ads.forEach(ad => {
+      data.forEach(ad => {
         const li = document.createElement('li');
         li.textContent = `${ad.title} — ${ad.price} ₽ — ${ad.district}`;
         adsList.appendChild(li);
       });
-    }
+    });
+}
+
+adForm.addEventListener('submit', function(e){
+  e.preventDefault();
+  const title = document.getElementById('title').value;
+  const price = document.getElementById('price').value;
+  const district = document.getElementById('district').value;
+
+  fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({title, price, district})
+  })
+  .then(res => res.json())
+  .then(data => {
+    adForm.reset();
+    fetchAds();
+  });
+});
+
+// Загружаем объявления при открытии приложения
+fetchAds();
   </script>
 </body>
 </html>
