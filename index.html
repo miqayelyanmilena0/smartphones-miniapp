@@ -1,134 +1,165 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Смартфоны в Москве</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
-  <!-- Telegram WebApp -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<title>SmartMarket</title>
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 16px;
-    }
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-    input, button {
-      width: 100%;
-      padding: 8px;
-      margin: 6px 0;
-    }
+<style>
+:root {
+  --bg: var(--tg-theme-bg-color, #f4f4f5);
+  --text: var(--tg-theme-text-color, #000);
+  --hint: var(--tg-theme-hint-color, #666);
+  --button: var(--tg-theme-button-color, #2ea6ff);
+  --button-text: var(--tg-theme-button-text-color, #fff);
+  --card: var(--tg-theme-secondary-bg-color, #fff);
+}
 
-    ul {
-      padding: 0;
-    }
+* {
+  box-sizing: border-box;
+}
 
-    li {
-      list-style: none;
-      border: 1px solid #ddd;
-      padding: 8px;
-      margin-bottom: 6px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+body {
+  margin: 0;
+  padding: 16px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
+  background: var(--bg);
+  color: var(--text);
+}
 
-    .delete {
-      cursor: pointer;
-      color: red;
-      font-weight: bold;
-    }
-  </style>
+h2 {
+  margin-top: 0;
+}
+
+input, button {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 10px;
+  border-radius: 12px;
+  font-size: 16px;
+}
+
+input {
+  border: 1px solid #ccc;
+  background: var(--card);
+  color: var(--text);
+}
+
+button {
+  border: none;
+  background: var(--button);
+  color: var(--button-text);
+  font-weight: 600;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.price {
+  font-weight: 600;
+}
+
+.delete {
+  color: red;
+  font-size: 20px;
+  cursor: pointer;
+}
+</style>
 </head>
+
 <body>
 
-  <h2>📱 Смартфоны в Москве</h2>
+<h2>📱 Смартфоны в Москве</h2>
 
-  <p>Размести объявление:</p>
+<form id="adForm">
+  <input id="title" placeholder="Модель смартфона" required />
+  <input id="price" type="number" placeholder="Цена ₽" required />
+  <input id="district" placeholder="Район" required />
+  <button type="submit">Разместить</button>
+</form>
 
-  <form id="adForm">
-    <input type="text" id="title" placeholder="Модель смартфона" required>
-    <input type="number" id="price" placeholder="Цена ₽" required>
-    <input type="text" id="district" placeholder="Район" required>
-    <button type="submit">Разместить</button>
-  </form>
-
-  <h3>Объявления:</h3>
-  <ul id="adsList"></ul>
+<div id="ads"></div>
 
 <script>
-  // --- TELEGRAM ---
-  const tg = window.Telegram?.WebApp;
-  if (tg) {
-    tg.ready();
-    tg.expand();
-  }
+const tg = window.Telegram.WebApp;
+tg.ready();
+tg.expand();
 
-  const CURRENT_USER_ID = tg?.initDataUnsafe?.user?.id || "browser";
+const USER_ID = tg.initDataUnsafe?.user?.id || "browser";
 
-  // 🔴 ВСТАВЬ СЮДА СВОЙ URL APPS SCRIPT
-  const API_URL = "https://script.google.com/macros/s/AKfycbxVpCmVYLj_V0LGdI8t6wJQ15kxM42H8MkvwWRCTocrS9jXUhOQ3Nvn_6Ayi7xwjEeVuw/exec";
+// 🔴 ВСТАВЬ СЮДА URL
+const API_URL = "https://script.google.com/macros/s/AKfycbxVpCmVYLj_V0LGdI8t6wJQ15kxM42H8MkvwWRCTocrS9jXUhOQ3Nvn_6Ayi7xwjEeVuw/exec";
 
-  const adForm = document.getElementById("adForm");
-  const adsList = document.getElementById("adsList");
+const adsEl = document.getElementById("ads");
+const form = document.getElementById("adForm");
 
-  // --- ЗАГРУЗКА ОБЪЯВЛЕНИЙ ---
-  function fetchAds() {
-    fetch(API_URL)
-      .then(res => res.json())
-      .then(data => {
-        adsList.innerHTML = "";
+function loadAds() {
+  fetch(API_URL)
+    .then(r => r.json())
+    .then(data => {
+      adsEl.innerHTML = "";
+      data.forEach(ad => {
+        const div = document.createElement("div");
+        div.className = "card";
+        div.innerHTML = `
+          <div>
+            <div>${ad.title}</div>
+            <div class="price">${ad.price} ₽ · ${ad.district}</div>
+          </div>
+        `;
 
-        data.forEach(ad => {
-          const li = document.createElement("li");
-          li.textContent = `${ad.title} — ${ad.price} ₽ — ${ad.district}`;
+        if (ad.userId == USER_ID) {
+          const del = document.createElement("span");
+          del.textContent = "❌";
+          del.className = "delete";
+          del.onclick = () => deleteAd(ad.id);
+          div.appendChild(del);
+        }
 
-          if (ad.userId == CURRENT_USER_ID) {
-            const del = document.createElement("span");
-            del.textContent = " ❌";
-            del.className = "delete";
-            del.onclick = () => deleteAd(ad.id);
-            li.appendChild(del);
-          }
-
-          adsList.appendChild(li);
-        });
+        adsEl.appendChild(div);
       });
-  }
-
-  // --- ДОБАВЛЕНИЕ ---
-  adForm.addEventListener("submit", function(e) {
-    e.preventDefault();
-
-    fetch(API_URL, {
-      method: "POST",
-      body: new URLSearchParams({
-        title: title.value,
-        price: price.value,
-        district: district.value,
-        userId: CURRENT_USER_ID
-      })
-    }).then(() => {
-      adForm.reset();
-      fetchAds();
     });
+}
+
+form.onsubmit = e => {
+  e.preventDefault();
+  fetch(API_URL, {
+    method: "POST",
+    body: new URLSearchParams({
+      title: title.value,
+      price: price.value,
+      district: district.value,
+      userId: USER_ID
+    })
+  }).then(() => {
+    form.reset();
+    loadAds();
   });
+};
 
-  // --- УДАЛЕНИЕ ---
-  function deleteAd(id) {
-    fetch(API_URL, {
-      method: "POST",
-      body: new URLSearchParams({
-        action: "delete",
-        id: id,
-        userId: CURRENT_USER_ID
-      })
-    }).then(() => fetchAds());
-  }
+function deleteAd(id) {
+  fetch(API_URL, {
+    method: "POST",
+    body: new URLSearchParams({
+      action: "delete",
+      id,
+      userId: USER_ID
+    })
+  }).then(loadAds);
+}
 
-  // старт
-  fetchAds();
-setInterval(fetchAds, 5000);
+loadAds();
+setInterval(loadAds, 7000);
 </script>
 
 </body>
