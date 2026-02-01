@@ -14,6 +14,14 @@
   --text: var(--tg-theme-text-color, #000000);
   --hint: var(--tg-theme-hint-color, #8e8e93);
   --accent: var(--tg-theme-button-color, #007aff);
+.error-message {
+  background: #ffebee;
+  padding: 12px;
+  border-radius: 12px;
+  margin: 10px 0;
+  color: #c62828;
+  display: none;
+  font-size: 14px;
 }
 
 body {
@@ -150,10 +158,13 @@ textarea { resize: none; }
     <input id="price" placeholder="Цена ₽">
     <input id="district" placeholder="Район">
     <textarea id="desc" placeholder="Описание"></textarea>
-    <input type="file" id="photo">
-    <button class="btn" onclick="addAd()">Опубликовать</button>
-  </div>
+<div id="loading" style="display:none; text-align:center; padding:10px;">
+  Загружаем фото...
 </div>
+<div id="error" class="error-message" style="display:none;"></div>
+
+<input type="file" id="photo">
+<button class="btn" onclick="addAd()">Опубликовать</button>
 
 <!-- TAB BAR -->
 <div class="tabbar">
@@ -170,7 +181,7 @@ const USER = tg.initDataUnsafe.user;
 const USER_ID = USER.id;
 const USERNAME = USER.username || "";
 
-const API_URL = "https://script.google.com/macros/s/AKfycbw9utd8fXpic_My97vB1H5tg_dN5D3pm5De2gKxPjax5yRms8hVRphayUh9ya1gHK0Beg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycby0FNr_ywbVIQHBvjGiHTlDn40YvLSswBuoZyxrRHWM97SYWwlTCwPTMpVsn7C7mrIfWA/exec";
 
 /* NAV */
 b1.onclick = ()=>show(allAds,b1);
@@ -188,14 +199,26 @@ function openModal(){ modal.classList.add('active'); }
 modal.onclick = e => { if(e.target===modal) modal.classList.remove('active'); }
 
 /* ADD AD */
-function addAd(){
+async function addAd() {
   const file = photo.files[0];
-  const reader = new FileReader();
-
-  reader.onload = function(){
-    const base64 = reader.result.split(",")[1];
-
-    fetch(API_URL, {
+  
+  if (!file) {
+    tg.showAlert("Добавьте фото!");
+    return;
+  }
+  
+  // Показываем загрузку
+  const btn = document.querySelector('#modal .btn');
+  const originalText = btn.textContent;
+  btn.textContent = "Загружаем...";
+  btn.disabled = true;
+  
+  try {
+    // Читаем файл как Base64
+    const base64 = await fileToBase64(file);
+    
+    // Отправляем на сервер
+    const response = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -209,15 +232,48 @@ function addAd(){
         imageBase64: base64,
         imageName: file.name
       })
-    }).then(()=>{
-      modal.classList.remove("active");
-      loadAllAds();
     });
-  };
-
-  reader.readAsDataURL(file);
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      // Очищаем форму
+      title.value = "";
+      price.value = "";
+      district.value = "";
+      desc.value = "";
+      photo.value = "";
+      
+      // Закрываем модальное окно
+      modal.classList.remove("active");
+      
+      // Обновляем список
+      loadAllAds();
+      
+      // Показываем уведомление
+      tg.showAlert("Объявление успешно добавлено!");
+    } else {
+      throw new Error(result.error || "Ошибка при добавлении");
+    }
+  } catch (error) {
+    console.error("Error adding ad:", error);
+    tg.showAlert("Ошибка: " + error.message);
+  } finally {
+    // Восстанавливаем кнопку
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
 }
 
+/* Helper: Convert File to Base64 */
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result.split(",")[1]);
+    reader.onerror = reject;
+  });
+}
 /* LOAD ADS */
 function loadAllAds(){
   fetch(API_URL+"?action=getAds")
