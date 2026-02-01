@@ -1,556 +1,1863 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SmartMarket</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartMarket - Продажа телефонов</title>
+    
+    <!-- Telegram Web App SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- Иконки для улучшения UI -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* Базовые переменные цветов */
+        :root {
+            --primary-color: #007aff;
+            --secondary-color: #5856d6;
+            --success-color: #34c759;
+            --danger-color: #ff3b30;
+            --warning-color: #ff9500;
+            --dark-color: #1c1c1e;
+            --light-color: #f2f2f7;
+            --border-color: #c7c7cc;
+            --text-primary: #000000;
+            --text-secondary: #8e8e93;
+            --text-tertiary: #c7c7cc;
+            --bg-primary: var(--tg-theme-bg-color, #f2f2f7);
+            --bg-secondary: var(--tg-theme-secondary-bg-color, #ffffff);
+            --bg-tertiary: var(--tg-theme-bg-color, #f2f2f7);
+            --button-color: var(--tg-theme-button-color, #007aff);
+            --button-text-color: var(--tg-theme-button-text-color, #ffffff);
+            --section-bg-color: var(--tg-theme-section-bg-color, #ffffff);
+            --text-color: var(--tg-theme-text-color, #000000);
+            --hint-color: var(--tg-theme-hint-color, #8e8e93);
+            --link-color: var(--tg-theme-link-color, #007aff);
+        }
 
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+        /* Сброс и базовые стили */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-<style>
-:root {
-  --bg: var(--tg-theme-bg-color, #f2f2f7);
-  --card: var(--tg-theme-secondary-bg-color, #ffffff);
-  --text: var(--tg-theme-text-color, #000000);
-  --hint: var(--tg-theme-hint-color, #8e8e93);
-  --accent: var(--tg-theme-button-color, #007aff);
-}
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-color);
+            line-height: 1.4;
+            overflow-x: hidden;
+            padding-bottom: 60px;
+        }
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, Roboto;
-  background: var(--bg);
-  color: var(--text);
-}
+        /* Контейнеры страниц */
+        .page {
+            display: none;
+            padding: 0 16px 80px;
+            min-height: 100vh;
+        }
 
-.page {
-  display: none;
-  padding: 16px;
-  padding-bottom: 100px;
-}
-.page.active { display: block; }
+        .page.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
 
-input, textarea {
-  width: 100%;
-  padding: 14px;
-  border-radius: 14px;
-  border: none;
-  margin-bottom: 12px;
-  font-size: 16px;
-  background: var(--card);
-  color: var(--text);
-}
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
 
-textarea { resize: none; }
+        /* Заголовки */
+        .page-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 20px 0;
+            padding: 0 4px;
+        }
 
-.card {
-  background: var(--card);
-  border-radius: 18px;
-  padding: 14px;
-  margin-bottom: 14px;
-}
+        /* Карточки объявлений */
+        .ad-card {
+            background-color: var(--bg-secondary);
+            border-radius: 16px;
+            margin-bottom: 16px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
 
-.card img {
-  width: 100%;
-  border-radius: 14px;
-  margin-bottom: 10px;
-}
+        .ad-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
 
-.price { color: var(--hint); margin-top: 6px; }
+        .ad-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+        }
 
-.btn {
-  width: 100%;
-  padding: 14px;
-  border-radius: 16px;
-  border: none;
-  font-size: 16px;
-  background: var(--accent);
-  color: white;
-}
+        .ad-image-placeholder {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
 
-.small-btn {
-  margin-top: 10px;
-  background: none;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-}
+        .ad-content {
+            padding: 16px;
+        }
 
-.tabbar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: var(--card);
-  display: flex;
-  border-top: 1px solid #ddd;
-}
+        .ad-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-color);
+        }
 
-.tabbar button {
-  flex: 1;
-  padding: 14px;
-  background: none;
-  border: none;
-  font-size: 15px;
-  color: var(--hint);
-}
+        .ad-description {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
 
-.tabbar button.active {
-  color: var(--accent);
-  font-weight: 600;
-}
+        .ad-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+margin-bottom: 16px;
+        }
 
-/* MODAL */
-.modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.4);
-  display: none;
-}
-.modal.active { display: flex; }
+        .ad-price {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
 
-.modal-content {
-  margin: auto;
-  background: var(--bg);
-  padding: 20px;
-  width: 90%;
-  border-radius: 20px;
-}
+        .ad-location {
+            font-size: 14px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+        }
 
-/* LOADING */
-.loading {
-  text-align: center;
-  padding: 20px;
-  display: none;
-}
+        .ad-location i {
+            margin-right: 4px;
+        }
 
-.loading.active {
-  display: block;
-}
+        .ad-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--border-color);
+            padding-top: 12px;
+        }
 
-/* ERROR */
-.error-message {
-  background: #ffebee;
-  padding: 12px;
-  border-radius: 12px;
-  margin: 10px 0;
-  color: #c62828;
-  display: none;
-  font-size: 14px;
-}
+        .ad-seller {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
 
-/* FILE INPUT STYLING */
-.file-input-container {
-  position: relative;
-  margin-bottom: 12px;
-}
+        .ad-date {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
 
-.file-input-container input[type="file"] {
-  opacity: 0;
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  cursor: pointer;
-}
+        /* Кнопки */
+        .btn {
+            display: inline-block;
+            padding: 14px 24px;
+            background-color: var(--button-color);
+            color: var(--button-text-color);
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            user-select: none;
+            width: 100%;
+        }
 
-.file-input-label {
-  display: block;
-  padding: 14px;
-  background: var(--card);
-  border-radius: 14px;
-  text-align: center;
-  color: var(--hint);
-  border: 1px dashed var(--hint);
-}
+        .btn:hover, .btn:active {
+            opacity: 0.9;
+            transform: scale(0.98);
+        }
 
-.file-input-label.has-file {
-  color: var(--accent);
-  border-color: var(--accent);
-}
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
 
-/* PHOTO PREVIEW */
-.photo-preview {
-  display: none;
-  margin-bottom: 12px;
-}
+        .btn-primary {
+            background-color: var(--primary-color);
+        }
 
-.photo-preview.active {
-  display: block;
-}
+        .btn-secondary {
+            background-color: var(--secondary-color);
+        }
 
-.photo-preview img {
-  width: 100%;
-  border-radius: 14px;
-}
-</style>
+        .btn-success {
+            background-color: var(--success-color);
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1.5px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+            border-radius: 8px;
+        }
+
+        /* Панель навигации */
+        .tab-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: var(--bg-secondary);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 12px 0;
+            border-top: 1px solid var(--border-color);
+            z-index: 1000;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 12px;
+            border-radius: 10px;
+            text-decoration: none;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+            min-width: 70px;
+        }
+
+        .tab-item.active {
+            color: var(--primary-color);
+            background-color: rgba(0, 122, 255, 0.1);
+        }
+
+        .tab-icon {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+
+        .tab-label {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        /* Формы */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-color);
+        }
+
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            padding: 16px;
+            background-color: var(--bg-secondary);
+            border: 1.5px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 16px;
+            color: var(--text-color);
+            transition: border-color 0.2s ease;
+        }
+
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        /* Модальные окна */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            animation: fadeIn 0.3s ease;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background-color: var(--bg-primary);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            padding: 20px 24px 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .modal-close:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .modal-footer {
+            padding: 20px 24px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Загрузка фото */
+        .photo-upload {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .photo-preview {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .photo-item {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .photo-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .photo-remove {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 24px;
+            height: 24px;
+            background-color: rgba(255, 59, 48, 0.9);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            border: none;
+        }
+
+        .photo-add-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            aspect-ratio: 1;
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            background-color: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .photo-add-btn:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .photo-add-btn i {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        /* Утилиты */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .mt-1 { margin-top: 8px; }
+        .mt-2 { margin-top: 16px; }
+        .mt-3 { margin-top: 24px; }
+        .mt-4 { margin-top: 32px; }
+.mb-1 { margin-bottom: 8px; }
+        .mb-2 { margin-bottom: 16px; }
+        .mb-3 { margin-bottom: 24px; }
+        .mb-4 { margin-bottom: 32px; }
+
+        /* Состояния загрузки */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: var(--text-tertiary);
+        }
+
+        /* Поиск */
+        .search-container {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background-color: var(--bg-primary);
+            padding: 16px 0;
+        }
+
+        .search-input {
+            position: relative;
+        }
+
+        .search-input input {
+            width: 100%;
+            padding: 16px 16px 16px 48px;
+            background-color: var(--bg-secondary);
+            border: 1.5px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 16px;
+            color: var(--text-color);
+        }
+
+        .search-input i {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+
+        /* Фильтры */
+        .filters-container {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 8px 0 16px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .filter-chip {
+            padding: 10px 16px;
+            background-color: var(--bg-secondary);
+            border: 1.5px solid var(--border-color);
+            border-radius: 20px;
+            font-size: 14px;
+            color: var(--text-color);
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-chip.active {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+
+        /* Чипы состояния */
+        .condition-chip {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .condition-new {
+            background-color: rgba(52, 199, 89, 0.2);
+            color: #2d973c;
+        }
+
+        .condition-used {
+            background-color: rgba(255, 149, 0, 0.2);
+            color: #cc7a00;
+        }
+
+        /* Адаптивность */
+        @media (max-width: 480px) {
+            .page {
+                padding: 0 12px 80px;
+            }
+            
+            .modal-content {
+                margin: 0 12px;
+            }
+            
+            .ad-price {
+                font-size: 18px;
+            }
+        }
+    </style>
 </head>
-
 <body>
-
-<!-- ALL ADS -->
-<div id="allAds" class="page active">
-  <h2>Объявления</h2>
-  <input id="search" placeholder="Поиск">
-  <button class="btn small-btn" onclick="openModal()">+ Разместить</button>
-  <div id="allAdsList"></div>
-</div>
-
-<!-- MY ADS -->
-<div id="myAds" class="page">
-  <h2>Мои объявления</h2>
-  <div id="myAdsList"></div>
-</div>
-
-<!-- PROFILE -->
-<div id="profile" class="page">
-  <h2>Профиль</h2>
-  <input id="name" placeholder="ФИО">
-  <input id="phone" placeholder="Телефон">
-  <button class="btn" onclick="saveProfile()">Сохранить</button>
-</div>
-
-<!-- MODAL ADD -->
-<div id="modal" class="modal">
-  <div class="modal-content">
-    <h3>Новое объявление</h3>
-    
-    <input id="title" placeholder="Модель телефона">
-    <input id="price" placeholder="Цена ₽">
-    <input id="district" placeholder="Район">
-    <textarea id="desc" placeholder="Описание"></textarea>
-    
-    <!-- Photo Preview -->
-    <div id="photoPreview" class="photo-preview">
-      <img id="previewImage" src="" alt="Preview">
-    </div>
-    
-    <!-- File Input with Custom Styling -->
-    <div class="file-input-container">
-      <input type="file" id="photo" accept="image/*" onchange="handlePhotoSelect(event)">
-      <label for="photo" id="fileLabel" class="file-input-label">
-        📷 Добавить фото
-      </label>
-    </div>
-    
-    <!-- Loading and Error Messages -->
-    <div id="loading" class="loading">
-      Загружаем фото...
-    </div>
-    
-    <div id="error" class="error-message"></div>
-    
-    <button class="btn" onclick="addAd()">Опубликовать</button>
-  </div>
-</div>
-
-<!-- TAB BAR -->
-<div class="tabbar">
-  <button class="active" id="b1">Объявления</button>
-  <button id="b2">Мои</button>
-  <button id="b3">Профиль</button>
-</div>
-
-<script>
-const tg = Telegram.WebApp;
-tg.ready(); tg.expand();
-
-const USER = tg.initDataUnsafe.user;
-const USER_ID = USER.id;
-const USERNAME = USER.username || "";
-
-// ЗАМЕНИТЕ НА ВАШ URL Apps Script
-const API_URL = "https://script.google.com/macros/s/AKfycbw-LtHVZYiQRqEKIK5-aFjBrryR9T4Ne2L8AQSO-5lMt9SApU6ewPKNpdvb9nhismkzBg/exec";
-
-/* NAVIGATION */
-b1.onclick = () => {
-  show(allAds, b1);
-  loadAllAds();
-};
-
-b2.onclick = () => {
-  show(myAds, b2);
-  loadMyAds();
-};
-
-b3.onclick = () => {
-  show(profile, b3);
-  loadProfile();
-};
-
-function show(page, button) {
-  document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
-  document.querySelectorAll('.tabbar button').forEach(x => x.classList.remove('active'));
-  page.classList.add('active');
-  button.classList.add('active');
-}
-
-/* MODAL FUNCTIONS */
-function openModal() {
-  modal.classList.add('active');
-  clearForm();
-}
-
-function closeModal() {
-  modal.classList.remove('active');
-  clearForm();
-}
-
-function clearForm() {
-  title.value = "";
-  price.value = "";
-  district.value = "";
-  desc.value = "";
-  photo.value = "";
-  fileLabel.textContent = "📷 Добавить фото";
-  fileLabel.classList.remove("has-file");
-  photoPreview.classList.remove("active");
-  hideError();
-}
-
-modal.onclick = function(e) {
-  if (e.target === modal) {
-    closeModal();
-  }
-};
-
-/* PHOTO HANDLING */
-function handlePhotoSelect(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  
-  if (file.size > 5 * 1024 * 1024) { // 5MB limit
-    showError("Файл слишком большой. Максимум 5MB");
-    photo.value = "";
-    return;
-  }
-  
-  // Update label
-  fileLabel.textContent = `📷 ${file.name}`;
-  fileLabel.classList.add("has-file");
-  
-  // Show preview
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    previewImage.src = e.target.result;
-    photoPreview.classList.add("active");
-  };
-  reader.readAsDataURL(file);
-}
-
-/* FILE TO BASE64 */
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result.split(",")[1]);
-    reader.onerror = reject;
-  });
-}
-
-/* ERROR HANDLING */
-function showError(message) {
-  error.textContent = message;
-  error.style.display = "block";
-}
-
-function hideError() {
-  error.style.display = "none";
-}
-
-/* ADD AD FUNCTION */
-async function addAd() {
-  const file = photo.files[0];
-  
-  // Validation
-  if (!title.value.trim()) {
-    showError("Введите модель телефона");
-    return;
-  }
-  
-  if (!price.value.trim()) {
-    showError("Введите цену");
-    return;
-  }
-  
-  if (!file) {
-    showError("Добавьте фото телефона");
-    return;
-  }
-  
-  // Show loading
-  const btn = document.querySelector('#modal .btn');
-  const originalText = btn.textContent;
-  btn.textContent = "Загружаем...";
-  btn.disabled = true;
-  loading.style.display = "block";
-  hideError();
-  
-  try {
-    // Convert to Base64
-    const base64 = await fileToBase64(file);
-    
-    // Send to server
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "addAd",
-        userId: USER_ID,
-        username: USERNAME,
-        title: title.value.trim(),
-        price: price.value.trim(),
-        district: district.value.trim(),
-        desc: desc.value.trim(),
-        imageBase64: base64,
-        imageName: file.name
-      })
-    });
-    
-    const result = await response.json();
-    
-    if (result.success) {
-      // Success
-      tg.showAlert("✅ Объявление успешно добавлено!");
-      closeModal();
-      loadAllAds();
-      loadMyAds();
-    } else {
-      throw new Error(result.error || "Ошибка сервера");
-    }
-  } catch (error) {
-    console.error("Error adding ad:", error);
-    showError("Ошибка: " + error.message);
-  } finally {
-    // Restore button
-    btn.textContent = originalText;
-    btn.disabled = false;
-    loading.style.display = "none";
-  }
-}
-
-/* LOAD ALL ADS */
-function loadAllAds() {
-  fetch(https://script.google.com/macros/s/AKfycbzbrLHlGEyzXjq7I2v44c9QMUHuQAVeaXI4TyM9FdSW7H4pCGE1jZ3vBhj7JLxpXkhGuA/exec + "?action=getAds")
-    .then(r => r.json())
-    .then(data => {
-      if (!Array.isArray(data)) {
-        console.error("Invalid data format:", data);
-        return;
-      }
-      
-      const searchTerm = search.value.toLowerCase();
-      allAdsList.innerHTML = "";
-      
-      data
-        .filter(ad => 
-          ad.title && 
-          ad.title.toLowerCase().includes(searchTerm)
-        )
-        .forEach(ad => {
-          const card = document.createElement('div');
-          card.className = 'card';
-          
-          let imageHtml = '';
-          if (ad.imageUrl) {
-            imageHtml = `<img src="${ad.imageUrl}" alt="${ad.title}" onerror="this.style.display='none'">`;
-          }
-          
-          card.innerHTML = `
-            ${imageHtml}
-            <strong>${ad.title || 'Без названия'}</strong>
-            <div>${ad.desc || ''}</div>
-            <div class="price">${ad.price || '0'} ₽ · ${ad.district || 'Не указан'}</div>
-            <button class="btn small-btn" 
-              onclick="tg.openTelegramLink('https://t.me/${ad.username || 'username'}')">
-              Написать продавцу
-            </button>
-          `;
-          
-          allAdsList.appendChild(card);
-        });
-    })
-    .catch(err => {
-      console.error("Error loading ads:", err);
-      allAdsList.innerHTML = '<div style="text-align:center;color:var(--hint);">Ошибка загрузки</div>';
-    });
-}
-
-/* LOAD MY ADS */
-function loadMyAds() {
-  fetch(API_URL + "?action=getAds")
-    .then(r => r.json())
-    .then(data => {
-      if (!Array.isArray(data)) return;
-      
-      myAdsList.innerHTML = "";
-      
-      const myAds = data.filter(ad => ad.userId == USER_ID);
-      
-      if (myAds.length === 0) {
-        myAdsList.innerHTML = '<div style="text-align:center;color:var(--hint);">У вас нет объявлений</div>';
-        return;
-      }
-      
-      myAds.forEach(ad => {
-        const card = document.createElement('div');
-        card.className = 'card';
+    <!-- Главная страница: Все объявления -->
+    <div id="pageHome" class="page active">
+        <div class="search-container">
+            <div class="search-input">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Поиск по объявлениям...">
+            </div>
+        </div>
         
-        let imageHtml = '';
-        if (ad.imageUrl) {
-          imageHtml = `<img src="${ad.imageUrl}" alt="${ad.title}" onerror="this.style.display='none'">`;
+        <div class="filters-container">
+            <div class="filter-chip active" data-filter="all">Все</div>
+<div class="filter-chip" data-filter="new">Новые</div>
+            <div class="filter-chip" data-filter="used">Б/У</div>
+            <div class="filter-chip" data-filter="apple">Apple</div>
+            <div class="filter-chip" data-filter="samsung">Samsung</div>
+            <div class="filter-chip" data-filter="xiaomi">Xiaomi</div>
+            <div class="filter-chip" data-filter="budget">До 10 000 ₽</div>
+        </div>
+        
+        <h1 class="page-title">Объявления</h1>
+        
+        <div id="adsList">
+            <!-- Объявления загружаются динамически -->
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p>Загрузка объявлений...</p>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <button class="btn btn-primary" id="btnCreateAd">
+                <i class="fas fa-plus-circle"></i> Разместить объявление
+            </button>
+        </div>
+    </div>
+    
+    <!-- Страница: Мои объявления -->
+    <div id="pageMyAds" class="page">
+        <h1 class="page-title">Мои объявления</h1>
+        
+        <div id="myAdsList">
+            <!-- Мои объявления загружаются динамически -->
+            <div class="empty-state">
+                <i class="fas fa-clipboard-list"></i>
+                <h3>У вас пока нет объявлений</h3>
+                <p class="mt-2">Создайте первое объявление, чтобы начать продавать</p>
+                <button class="btn btn-primary mt-3" id="btnCreateAdFromMy">
+                    <i class="fas fa-plus-circle"></i> Создать объявление
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Страница: Профиль -->
+    <div id="pageProfile" class="page">
+        <h1 class="page-title">Профиль</h1>
+        
+        <div class="ad-card">
+            <div class="ad-content">
+                <div class="text-center mb-3">
+                    <div style="width: 80px; height: 80px; background-color: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; color: white; font-size: 32px;">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <h2 id="userName">Пользователь</h2>
+                    <p id="userPhone" style="color: var(--text-secondary);">Телефон не указан</p>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Имя и фамилия</label>
+                    <input type="text" class="form-input" id="inputName" placeholder="Введите ваше имя">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Номер телефона</label>
+                    <input type="tel" class="form-input" id="inputPhone" placeholder="+7 (999) 123-45-67">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Город</label>
+                    <input type="text" class="form-input" id="inputCity" placeholder="Москва">
+                </div>
+                
+                <button class="btn btn-primary mt-3" id="btnSaveProfile">
+                    <i class="fas fa-save"></i> Сохранить профиль
+                </button>
+            </div>
+        </div>
+        
+        <div class="mt-3">
+            <div class="ad-card">
+                <div class="ad-content">
+                    <h3 style="margin-bottom: 16px;">Статистика</h3>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                        <span>Активных объявлений:</span>
+                        <strong id="statActiveAds">0</strong>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                        <span>Продано телефонов:</span>
+                        <strong id="statSoldAds">0</strong>
+                    </div>
+<div style="display: flex; justify-content: space-between;">
+                        <span>Рейтинг продавца:</span>
+                        <strong id="statRating">5.0</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-3">
+            <button class="btn btn-outline" onclick="showHelp()">
+                <i class="fas fa-question-circle"></i> Помощь
+            </button>
+            
+            <button class="btn btn-outline mt-2" onclick="clearAllData()">
+                <i class="fas fa-trash-alt"></i> Очистить данные
+            </button>
+            
+            <button class="btn btn-outline mt-2" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i> Выйти
+            </button>
+        </div>
+    </div>
+    
+    <!-- Модальное окно: Создание объявления -->
+    <div id="modalCreateAd" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Новое объявление</h2>
+                <button class="modal-close" id="btnCloseModal">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Модель телефона *</label>
+                    <input type="text" class="form-input" id="adTitle" placeholder="Например: iPhone 14 Pro Max 256GB">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Состояние *</label>
+                    <select class="form-select" id="adCondition">
+                        <option value="new">Новый</option>
+                        <option value="like_new">Как новый</option>
+                        <option value="good">Хорошее</option>
+                        <option value="satisfactory">Удовлетворительное</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Цена (₽) *</label>
+                    <input type="number" class="form-input" id="adPrice" placeholder="Например: 75000">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Город и район *</label>
+                    <input type="text" class="form-input" id="adLocation" placeholder="Например: Москва, ЦАО">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Описание *</label>
+                    <textarea class="form-textarea" id="adDescription" placeholder="Опишите телефон, укажите дефекты, комплектацию..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Фотографии (макс. 5)</label>
+                    <div class="photo-upload">
+                        <div class="photo-preview" id="photoPreview">
+                            <!-- Фотографии будут добавляться динамически -->
+                        </div>
+                        <label class="photo-add-btn" for="photoInput">
+                            <i class="fas fa-camera"></i>
+                            <span>Добавить фото</span>
+                        </label>
+                        <input type="file" id="photoInput" accept="image/*" multiple style="display: none;">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Категория</label>
+                    <select class="form-select" id="adCategory">
+                        <option value="apple">Apple (iPhone)</option>
+                        <option value="samsung">Samsung</option>
+                        <option value="xiaomi">Xiaomi</option>
+                        <option value="huawei">Huawei</option>
+                        <option value="other">Другое</option>
+                    </select>
+</div>
+                
+                <div class="form-group">
+                    <label class="form-label">Контакты для связи</label>
+                    <input type="text" class="form-input" id="adContact" placeholder="Telegram, WhatsApp или телефон">
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="btnCancelAd">Отмена</button>
+                <button class="btn btn-primary" id="btnPublishAd">Опубликовать</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Модальное окно: Просмотр объявления -->
+    <div id="modalViewAd" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="viewAdTitle"></h2>
+                <button class="modal-close" id="btnCloseViewModal">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <div id="viewAdImages" class="photo-preview"></div>
+                
+                <div class="ad-details mt-3">
+                    <div class="ad-price" id="viewAdPrice"></div>
+                    <div class="ad-location" id="viewAdLocation"></div>
+                </div>
+                
+                <div class="mt-3">
+                    <span class="condition-chip" id="viewAdCondition"></span>
+                    <span class="condition-chip" id="viewAdCategory"></span>
+                </div>
+                
+                <div class="mt-3">
+                    <h3>Описание</h3>
+                    <p id="viewAdDescription" style="margin-top: 8px;"></p>
+                </div>
+                
+                <div class="mt-3">
+                    <h3>Контакты продавца</h3>
+                    <p id="viewAdContact" style="margin-top: 8px;"></p>
+                    <p id="viewAdSeller" style="color: var(--text-secondary); margin-top: 4px;"></p>
+                </div>
+                
+                <div class="mt-3">
+                    <p style="font-size: 12px; color: var(--text-tertiary);" id="viewAdDate"></p>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="btnCloseView">Закрыть</button>
+                <button class="btn btn-primary" id="btnContactSeller">
+                    <i class="fas fa-paper-plane"></i> Связаться
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Нижняя навигационная панель -->
+    <div class="tab-bar">
+        <a href="#" class="tab-item active" data-page="home">
+            <i class="fas fa-home tab-icon"></i>
+            <span class="tab-label">Объявления</span>
+        </a>
+        
+        <a href="#" class="tab-item" data-page="myAds">
+            <i class="fas fa-clipboard-list tab-icon"></i>
+            <span class="tab-label">Мои</span>
+        </a>
+        
+        <a href="#" class="tab-item" data-page="profile">
+            <i class="fas fa-user tab-icon"></i>
+            <span class="tab-label">Профиль</span>
+        </a>
+    </div>
+
+    <!-- Основной JavaScript код -->
+    <script>
+        // ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И КОНСТАНТЫ ==========
+        const Telegram = window.Telegram;
+        const tg = Telegram?.WebApp;
+        
+        // API URL - ЗАМЕНИТЕ НА ВАШ РЕАЛЬНЫЙ URL Google Apps Script
+        const API_URL = "https://script.google.com/macros/s/AKfycbw-LtHVZYiQRqEKIK5-aFjBrryR9T4Ne2L8AQSO-5lMt9SApU6ewPKNpdvb9nhismkzBg/exec";
+        
+        // Данные пользователя из Telegram
+        const user = tg?.initDataUnsafe?.user || {};
+        const userId = user.id || user_${Date.now()}_${Math.random().toString(36).substr(2, 9)};
+        const username = user.username || "user";
+        const firstName = user.first_name || "Пользователь";
+        const lastName = user.last_name || "";
+        
+        // Состояние приложения
+        let appState = {
+            currentPage: 'home',
+            ads: [],
+            myAds: [],
+            userProfile: {},
+            selectedPhotos: [],
+currentViewAd: null,
+            filters: {
+                search: '',
+                condition: 'all',
+                category: 'all',
+                priceRange: 'all'
+            }
+        };
+        
+        // Данные для демонстрации (если нет бэкенда)
+        const demoAds = [
+            {
+                id: '1',
+                userId: 'demo_user_1',
+                title: 'iPhone 14 Pro Max 256GB',
+                description: 'Новый, в оригинальной упаковке, гарантия 12 месяцев. Цвет Deep Purple. Все чеки и документы.',
+                price: 109990,
+                condition: 'new',
+                category: 'apple',
+                location: 'Москва, ЦАО',
+                contact: '@iphone_seller',
+                sellerName: 'Александр',
+                date: '2023-10-15',
+                images: ['https://via.placeholder.com/400x300/007AFF/FFFFFF?text=iPhone+14+Pro']
+            },
+            {
+                id: '2',
+                userId: 'demo_user_2',
+                title: 'Samsung Galaxy S23 Ultra 512GB',
+                description: 'Б/у, отличное состояние, без царапин. Полный комплект: наушники, зарядка, документы.',
+                price: 84990,
+                condition: 'like_new',
+                category: 'samsung',
+                location: 'Санкт-Петербург',
+                contact: '+7 (999) 123-45-67',
+                sellerName: 'Мария',
+                date: '2023-10-14',
+                images: ['https://via.placeholder.com/400x300/34C759/FFFFFF?text=Samsung+S23']
+            },
+            {
+                id: '3',
+                userId: 'demo_user_3',
+                title: 'Xiaomi Redmi Note 12 Pro',
+                description: 'Новый, нераспакованный. Лучшее предложение на рынке. Доставка по городу бесплатно.',
+                price: 29990,
+                condition: 'new',
+                category: 'xiaomi',
+                location: 'Казань',
+                contact: '@xiaomi_kazan',
+                sellerName: 'Ильдар',
+                date: '2023-10-13',
+                images: ['https://via.placeholder.com/400x300/FF9500/FFFFFF?text=Xiaomi+Note+12']
+            },
+            {
+                id: '4',
+                userId: userId, // Это ваше объявление
+                title: 'iPhone 12 128GB',
+                description: 'Хорошее состояние, батарея 87%, есть мелкие царапины на экране. В комплекте зарядка и чехол.',
+                price: 45900,
+                condition: 'good',
+                category: 'apple',
+                location: 'Москва, СВАО',
+                contact: username,
+                sellerName: firstName,
+                date: '2023-10-10',
+                images: []
+            }
+        ];
+        
+        // ========== ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ==========
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('SmartMarket App Initializing...');
+            
+            // Инициализация Telegram Web App
+            if (tg) {
+                tg.ready();
+                tg.expand();
+                tg.enableClosingConfirmation();
+                
+                // Устанавливаем цветовую тему
+                if (tg.colorScheme === 'dark') {
+                    document.documentElement.style.setProperty('--bg-primary', '#000000');
+                    document.documentElement.style.setProperty('--bg-secondary', '#1c1c1e');
+                }
+            }
+            
+            // Загрузка данных из localStorage
+            loadFromLocalStorage();
+            
+            // Инициализация UI
+            initUI();
+            
+            // Загрузка данных
+            loadData();
+            
+            console.log('SmartMarket App Initialized Successfully');
+        });
+        
+        // ========== ФУНКЦИИ ИНИЦИАЛИЗАЦИИ ==========
+        function initUI() {
+            // Инициализация навигации
+            initNavigation();
+            
+            // Инициализация модальных окон
+            initModals();
+            
+            // Инициализация форм
+            initForms();
+// Инициализация фильтров
+            initFilters();
+            
+            // Инициализация поиска
+            initSearch();
+            
+            // Обновление UI пользователя
+            updateUserUI();
         }
         
-        card.innerHTML = `
-          ${imageHtml}
-          <strong>${ad.title || 'Без названия'}</strong>
-          <div>${ad.desc || ''}</div>
-          <div class="price">${ad.price || '0'} ₽ · ${ad.district || 'Не указан'}</div>
-          <button class="btn small-btn" onclick="tg.showAlert('Это ваше объявление')">
-            Ваше объявление
-          </button>
-        `;
+        function initNavigation() {
+            // Обработчики для табов
+            const tabItems = document.querySelectorAll('.tab-item');
+            tabItems.forEach(tab => {
+                tab.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Получаем страницу для перехода
+                    const pageId = this.getAttribute('data-page');
+                    
+                    // Переключаем активный таб
+                    tabItems.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Показываем соответствующую страницу
+                    showPage(pageId);
+                });
+            });
+            
+            // Кнопка создания объявления
+            document.getElementById('btnCreateAd')?.addEventListener('click', showCreateAdModal);
+            document.getElementById('btnCreateAdFromMy')?.addEventListener('click', showCreateAdModal);
+        }
         
-        myAdsList.appendChild(card);
-      });
-    })
-    .catch(err => {
-      console.error("Error loading my ads:", err);
-    });
-}
+        function initModals() {
+            // Модальное окно создания объявления
+            document.getElementById('btnCloseModal')?.addEventListener('click', hideCreateAdModal);
+            document.getElementById('btnCancelAd')?.addEventListener('click', hideCreateAdModal);
+            
+            // Модальное окно просмотра объявления
+            document.getElementById('btnCloseViewModal')?.addEventListener('click', hideViewAdModal);
+            document.getElementById('btnCloseView')?.addEventListener('click', hideViewAdModal);
+            
+            // Закрытие модальных окон по клику на оверлей
+            document.querySelectorAll('.modal-overlay').forEach(modal => {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        this.classList.add('hidden');
+                    }
+                });
+            });
+        }
+        
+        function initForms() {
+            // Форма создания объявления
+            const photoInput = document.getElementById('photoInput');
+            if (photoInput) {
+                photoInput.addEventListener('change', handlePhotoUpload);
+            }
+            
+            // Кнопка публикации объявления
+            document.getElementById('btnPublishAd')?.addEventListener('click', publishAd);
+            
+            // Форма профиля
+            document.getElementById('btnSaveProfile')?.addEventListener('click', saveProfile);
+            
+            // Кнопка связи с продавцом
+            document.getElementById('btnContactSeller')?.addEventListener('click', contactSeller);
+        }
+        
+        function initFilters() {
+            const filterChips = document.querySelectorAll('.filter-chip');
+            filterChips.forEach(chip => {
+                chip.addEventListener('click', function() {
+                    // Убираем активный класс у всех фильтров
+                    filterChips.forEach(c => c.classList.remove('active'));
+                    
+                    // Добавляем активный класс текущему
+                    this.classList.add('active');
+                    
+                    // Применяем фильтр
+                    const filter = this.getAttribute('data-filter');
+                    applyFilter(filter);
+                });
+            });
+        }
+        
+        function initSearch() {
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                // Поиск с задержкой (debounce)
+                let searchTimeout;
+                searchInput.addEventListener('input', function() {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        appState.filters.search = this.value.
+toLowerCase();
+                        renderAds();
+                    }, 300);
+                });
+            }
+        }
+        
+        // ========== ОСНОВНЫЕ ФУНКЦИИ ПРИЛОЖЕНИЯ ==========
+        function showPage(pageId) {
+            // Скрываем все страницы
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // Показываем выбранную страницу
+            const pageElement = document.getElementById(`page${capitalizeFirstLetter(pageId)}`);
+            if (pageElement) {
+                pageElement.classList.add('active');
+                appState.currentPage = pageId;
+                
+                // Загружаем данные для страницы
+                switch(pageId) {
+                    case 'home':
+                        renderAds();
+                        break;
+                    case 'myAds':
+                        renderMyAds();
+                        break;
+                    case 'profile':
+                        updateProfileUI();
+                        break;
+                }
+            }
+        }
+        
+        function showCreateAdModal() {
+            document.getElementById('modalCreateAd').classList.remove('hidden');
+            // Сбрасываем форму
+            resetAdForm();
+        }
+        
+        function hideCreateAdModal() {
+            document.getElementById('modalCreateAd').classList.add('hidden');
+        }
+        
+        function showViewAdModal(adId) {
+            const ad = appState.ads.find(a => a.id === adId) || demoAds.find(a => a.id === adId);
+            if (!ad) return;
+            
+            appState.currentViewAd = ad;
+            
+            // Заполняем данные
+            document.getElementById('viewAdTitle').textContent = ad.title;
+            document.getElementById('viewAdPrice').textContent = formatPrice(ad.price);
+            document.getElementById('viewAdLocation').innerHTML = <i class="fas fa-map-marker-alt"></i> ${ad.location};
+            document.getElementById('viewAdDescription').textContent = ad.description;
+            document.getElementById('viewAdContact').textContent = ad.contact;
+            document.getElementById('viewAdSeller').textContent = Продавец: ${ad.sellerName};
+            document.getElementById('viewAdDate').textContent = Опубликовано: ${formatDate(ad.date)};
+            
+            // Состояние
+            const conditionElement = document.getElementById('viewAdCondition');
+            conditionElement.textContent = getConditionText(ad.condition);
+            conditionElement.className = condition-chip condition-${ad.condition === 'new' ? 'new' : 'used'};
+            
+            // Категория
+            const categoryElement = document.getElementById('viewAdCategory');
+            categoryElement.textContent = getCategoryText(ad.category);
+            categoryElement.style.backgroundColor = getCategoryColor(ad.category);
+            
+            // Изображения
+            const imagesContainer = document.getElementById('viewAdImages');
+            imagesContainer.innerHTML = '';
+            
+            if (ad.images && ad.images.length > 0) {
+                ad.images.forEach(img => {
+                    const imgElement = document.createElement('img');
+                    imgElement.src = img;
+                    imgElement.alt = ad.title;
+                    imagesContainer.appendChild(imgElement);
+                });
+            } else {
+                imagesContainer.innerHTML = '<div class="photo-add-btn"><i class="fas fa-image"></i><span>Нет фото</span></div>';
+            }
+            
+            // Показываем модальное окно
+            document.getElementById('modalViewAd').classList.remove('hidden');
+        }
+        
+        function hideViewAdModal() {
+            document.getElementById('modalViewAd').classList.add('hidden');
+        }
+        
+        function applyFilter(filter) {
+            appState.filters.category = filter;
+            renderAds();
+        }
+function handlePhotoUpload(event) {
+            const files = Array.from(event.target.files).slice(0, 5); // Макс. 5 файлов
+            
+            files.forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(e) {
+                        const photo = {
+                            id: photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)},
+                            dataUrl: e.target.result,
+                            file: file
+                        };
+                        
+                        appState.selectedPhotos.push(photo);
+                        updatePhotoPreview();
+                    };
+                    
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            // Сбрасываем input, чтобы можно было загрузить те же файлы снова
+            event.target.value = '';
+        }
+        
+        function updatePhotoPreview() {
+            const previewContainer = document.getElementById('photoPreview');
+            previewContainer.innerHTML = '';
+            
+            // Отображаем выбранные фото
+            appState.selectedPhotos.forEach((photo, index) => {
+                const photoItem = document.createElement('div');
+                photoItem.className = 'photo-item';
+                
+                photoItem.innerHTML = `
+                    <img src="${photo.dataUrl}" alt="Фото ${index + 1}">
+                    <button class="photo-remove" data-index="${index}">&times;</button>
+                `;
+                
+                previewContainer.appendChild(photoItem);
+            });
+            
+            // Добавляем кнопку добавления фото, если меньше 5
+            if (appState.selectedPhotos.length < 5) {
+                const addButton = document.createElement('label');
+                addButton.className = 'photo-add-btn';
+                addButton.htmlFor = 'photoInput';
+                addButton.innerHTML = '<i class="fas fa-camera"></i><span>Добавить</span>';
+                
+                previewContainer.appendChild(addButton);
+            }
+            
+            // Добавляем обработчики для кнопок удаления
+            previewContainer.querySelectorAll('.photo-remove').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const index = parseInt(this.getAttribute('data-index'));
+                    removePhoto(index);
+                });
+            });
+        }
+        
+        function removePhoto(index) {
+            appState.selectedPhotos.splice(index, 1);
+            updatePhotoPreview();
+        }
+        
+        function resetAdForm() {
+            document.getElementById('adTitle').value = '';
+            document.getElementById('adCondition').value = 'new';
+            document.getElementById('adPrice').value = '';
+            document.getElementById('adLocation').value = '';
+            document.getElementById('adDescription').value = '';
+            document.getElementById('adCategory').value = 'apple';
+            document.getElementById('adContact').value = username ? @${username} : '';
+            
+            appState.selectedPhotos = [];
+            updatePhotoPreview();
+        }
+        
+        async function publishAd() {
+            // Валидация формы
+            const title = document.getElementById('adTitle').value.trim();
+            const price = document.getElementById('adPrice').value.trim();
+            const location = document.getElementById('adLocation').value.trim();
+            const description = document.getElementById('adDescription').value.trim();
+            
+            if (!title  !price  !location || !description) {
+                showAlert('Пожалуйста, заполните все обязательные поля (отмечены *)');
+                return;
+            }
+            
+            if (isNaN(price) || parseInt(price) <= 0) {
+                showAlert('Пожалуйста, введите корректную цену');
+return;
+            }
+            
+            // Создаем объект объявления
+            const newAd = {
+                id: ad_${Date.now()}_${Math.random().toString(36).substr(2, 9)},
+                userId: userId,
+                title: title,
+                description: description,
+                price: parseInt(price),
+                condition: document.getElementById('adCondition').value,
+                category: document.getElementById('adCategory').value,
+                location: location,
+                contact: document.getElementById('adContact').value || (username ? @${username} : ''),
+                sellerName: appState.userProfile.name || firstName,
+                date: new Date().toISOString().split('T')[0],
+                images: appState.selectedPhotos.map(photo => photo.dataUrl)
+            };
+            
+            // Добавляем объявление
+            if (typeof saveAdToBackend === 'function') {
+                // Если есть функция для сохранения на бэкенд
+                await saveAdToBackend(newAd);
+            } else {
+                // Сохраняем локально
+                appState.ads.unshift(newAd);
+                saveToLocalStorage();
+            }
+            
+            // Показываем уведомление
+            showAlert('Объявление успешно опубликовано!', 'success');
+            
+            // Закрываем модальное окно
+            hideCreateAdModal();
+            
+            // Обновляем список объявлений
+            renderAds();
+            renderMyAds();
+            
+            // Сбрасываем форму
+            resetAdForm();
+        }
+        
+        function saveProfile() {
+            const name = document.getElementById('inputName').value.trim();
+            const phone = document.getElementById('inputPhone').value.trim();
+            const city = document.getElementById('inputCity').value.trim();
+            
+            if (!name) {
+                showAlert('Пожалуйста, введите ваше имя');
+                return;
+            }
+            
+            // Сохраняем профиль
+            appState.userProfile = {
+                name: name,
+                phone: phone,
+                city: city,
+                updatedAt: new Date().toISOString()
+            };
+            
+            saveToLocalStorage();
+            updateUserUI();
+            
+            showAlert('Профиль успешно сохранен!', 'success');
+        }
+        
+        function contactSeller() {
+            if (!appState.currentViewAd) return;
+            
+            const ad = appState.currentViewAd;
+            let contactMethod = '';
+            
+            if (ad.contact.startsWith('@')) {
+                // Telegram username
+                contactMethod = https://t.me/${ad.contact.substring(1)};
+            } else if (ad.contact.includes('@')) {
+                // Email
+                contactMethod = mailto:${ad.contact};
+            } else {
+                // Phone number
+                contactMethod = tel:${ad.contact.replace(/\D/g, '')};
+            }
+            
+            // Открываем контакт
+            if (tg) {
+                tg.openTelegramLink(contactMethod);
+            } else {
+                window.open(contactMethod, '_blank');
+            }
+            
+            hideViewAdModal();
+        }
+        
+        // ========== ФУНКЦИИ ОТОБРАЖЕНИЯ ДАННЫХ ==========
+        function renderAds() {
+            const adsList = document.getElementById('adsList');
+            if (!adsList) return;
+            
+            // Фильтрация объявлений
+            let filteredAds = [...appState.ads, ...demoAds].filter(ad => {
+                // Поиск по тексту
+                if (appState.filters.search) {
+                    const searchText = appState.filters.search.toLowerCase();
+                    if (!ad.title.toLowerCase().includes(searchText) && 
+                        !ad.description.toLowerCase().includes(searchText)) {
+                        return false;
+                    }
+                }
+                
+                // Фильтр по категории
+if (appState.filters.category && appState.filters.category !== 'all') {
+                    if (appState.filters.category === 'budget') {
+                        if (ad.price > 10000) return false;
+                    } else if (ad.category !== appState.filters.category) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            });
+            
+            // Если нет объявлений
+            if (filteredAds.length === 0) {
+                adsList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-search"></i>
+                        <h3>Объявления не найдены</h3>
+                        <p class="mt-2">Попробуйте изменить параметры поиска</p>
+                        <button class="btn btn-primary mt-3" onclick="showCreateAdModal()">
+                            <i class="fas fa-plus-circle"></i> Создать первое объявление
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Рендеринг объявлений
+            adsList.innerHTML = '';
+            
+            filteredAds.forEach(ad => {
+                const adElement = document.createElement('div');
+                adElement.className = 'ad-card';
+                adElement.dataset.adId = ad.id;
+                
+                // Определяем, является ли объявление пользователя своим
+                const isMyAd = ad.userId === userId;
+                
+                // Изображение
+                let imageHtml = '';
+                if (ad.images && ad.images.length > 0) {
+                    imageHtml = <img src="${ad.images[0]}" alt="${ad.title}" class="ad-image">;
+                } else {
+                    imageHtml = <div class="ad-image-placeholder"><i class="fas fa-mobile-alt"></i> Нет фото</div>;
+                }
+                
+                // Чип состояния
+                const conditionText = getConditionText(ad.condition);
+                const conditionClass = ad.condition === 'new' ? 'condition-new' : 'condition-used';
+                
+                // Категория
+                const categoryText = getCategoryText(ad.category);
+                const categoryColor = getCategoryColor(ad.category);
+                
+                adElement.innerHTML = `
+                    ${imageHtml}
+                    <div class="ad-content">
+                        <h3 class="ad-title">${ad.title}</h3>
+                        <p class="ad-description">${ad.description.length > 100 ? ad.description.substring(0, 100) + '...' : ad.description}</p>
+                        
+                        <div class="ad-details">
+                            <div class="ad-price">${formatPrice(ad.price)}</div>
+                            <div class="ad-location"><i class="fas fa-map-marker-alt"></i> ${ad.location}</div>
+                        </div>
+                        
+                        <div class="mt-2">
+                            <span class="condition-chip ${conditionClass}">${conditionText}</span>
+                            <span class="condition-chip" style="background-color: ${categoryColor}">${categoryText}</span>
+                        </div>
+                        
+                        <div class="ad-footer">
+                            <div class="ad-seller">${isMyAd ? '<i class="fas fa-user-check"></i> Ваше объявление' : `Продавец: ${ad.sellerName}`}</div>
+                            <div class="ad-date">${formatDate(ad.date)}</div>
+                        </div>
+                        
+                        <button class="btn btn-small ${isMyAd ? 'btn-outline' : 'btn-primary'} mt-3" onclick="${isMyAd ? editAd('${ad.id}') : `showViewAdModal('${ad.id}')`}">
+                            ${isMyAd ? '<i class="fas fa-edit"></i> Редактировать' : '<i class="fas fa-eye"></i> Посмотреть'}
+                        </button>
+                    </div>
+                `;
+                
+                adsList.
+appendChild(adElement);
+            });
+        }
+        
+        function renderMyAds() {
+            const myAdsList = document.getElementById('myAdsList');
+            if (!myAdsList) return;
+            
+            // Фильтруем объявления пользователя
+            const userAds = [...appState.ads, ...demoAds].filter(ad => ad.userId === userId);
+            
+            // Если нет объявлений
+            if (userAds.length === 0) {
+                myAdsList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-clipboard-list"></i>
+                        <h3>У вас пока нет объявлений</h3>
+                        <p class="mt-2">Создайте первое объявление, чтобы начать продавать</p>
+                        <button class="btn btn-primary mt-3" onclick="showCreateAdModal()">
+                            <i class="fas fa-plus-circle"></i> Создать объявление
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Рендерим объявления пользователя
+            myAdsList.innerHTML = '';
+            
+            userAds.forEach(ad => {
+                const adElement = document.createElement('div');
+                adElement.className = 'ad-card';
+                adElement.dataset.adId = ad.id;
+                
+                // Изображение
+                let imageHtml = '';
+                if (ad.images && ad.images.length > 0) {
+                    imageHtml = <img src="${ad.images[0]}" alt="${ad.title}" class="ad-image">;
+                } else {
+                    imageHtml = <div class="ad-image-placeholder"><i class="fas fa-mobile-alt"></i> Нет фото</div>;
+                }
+                
+                // Статус объявления (можно добавить поле status в объект ad)
+                const status = ad.status || 'active';
+                const statusText = status === 'active' ? 'Активно' : 'Продано';
+                const statusClass = status === 'active' ? 'condition-new' : 'condition-used';
+                
+                adElement.innerHTML = `
+                    ${imageHtml}
+                    <div class="ad-content">
+                        <h3 class="ad-title">${ad.title}</h3>
+                        
+                        <div class="ad-details">
+                            <div class="ad-price">${formatPrice(ad.price)}</div>
+                            <div class="ad-location"><i class="fas fa-map-marker-alt"></i> ${ad.location}</div>
+                        </div>
+                        
+                        <div class="mt-2">
+                            <span class="condition-chip ${statusClass}">${statusText}</span>
+                            <span class="condition-chip ${ad.condition === 'new' ? 'condition-new' : 'condition-used'}">
+                                ${getConditionText(ad.condition)}
+                            </span>
+                        </div>
+                        
+                        <div class="ad-footer">
+                            <div class="ad-date">${formatDate(ad.date)}</div>
+                            <div>Просмотры: ${ad.views || 0}</div>
+                        </div>
+                        
+                        <div class="mt-3" style="display: flex; gap: 8px;">
+                            <button class="btn btn-small btn-primary" style="flex: 1;" onclick="showViewAdModal('${ad.id}')">
+                                <i class="fas fa-eye"></i> Посмотреть
+                            </button>
+                            <button class="btn btn-small btn-outline" style="flex: 1;" onclick="editAd('${ad.id}')">
+                                <i class="fas fa-edit"></i> Редактировать
+                            </button>
+                            <button class="btn btn-small btn-outline" style="flex: 1;" onclick="deleteAd('${ad.id}')">
+                                <i class="fas fa-trash"></i> Удалить
+                            </button>
+                        </div>
+                    </div>
+                `;
+myAdsList.appendChild(adElement);
+            });
+            
+            // Обновляем статистику в профиле
+            updateProfileStats(userAds);
+        }
+        
+        function updateUserUI() {
+            // Имя пользователя
+            const userNameElement = document.getElementById('userName');
+            if (userNameElement) {
+                userNameElement.textContent = appState.userProfile.name  firstName  'Пользователь';
+            }
+            
+            // Телефон
+            const userPhoneElement = document.getElementById('userPhone');
+            if (userPhoneElement) {
+                userPhoneElement.textContent = appState.userProfile.phone || 'Телефон не указан';
+            }
+            
+            // Заполняем поля формы профиля
+            document.getElementById('inputName').value = appState.userProfile.name  firstName  '';
+            document.getElementById('inputPhone').value = appState.userProfile.phone || '';
+            document.getElementById('inputCity').value = appState.userProfile.city || '';
+        }
+        
+        function updateProfileUI() {
+            updateUserUI();
+            
+            // Обновляем статистику
+            const userAds = [...appState.ads, ...demoAds].filter(ad => ad.userId === userId);
+            updateProfileStats(userAds);
+        }
+        
+        function updateProfileStats(userAds) {
+            document.getElementById('statActiveAds').textContent = userAds.length;
+            document.getElementById('statSoldAds').textContent = userAds.filter(ad => ad.status === 'sold').length;
+            
+            // Простой рейтинг (можно усложнить логику)
+            const rating = userAds.length > 0 ? 5.0 : 0;
+            document.getElementById('statRating').textContent = rating.toFixed(1);
+        }
+        
+        // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
+        function formatPrice(price) {
+            return new Intl.NumberFormat('ru-RU', {
+                style: 'currency',
+                currency: 'RUB',
+                minimumFractionDigits: 0
+            }).format(price);
+        }
+        
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ru-RU', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric'
+            });
+        }
+        
+        function getConditionText(condition) {
+            const conditions = {
+                'new': 'Новый',
+                'like_new': 'Как новый',
+                'good': 'Хорошее',
+                'satisfactory': 'Удовлетворительное'
+            };
+            return conditions[condition] || condition;
+        }
+        
+        function getCategoryText(category) {
+            const categories = {
+                'apple': 'Apple',
+                'samsung': 'Samsung',
+                'xiaomi': 'Xiaomi',
+                'huawei': 'Huawei',
+                'other': 'Другое'
+            };
+            return categories[category] || category;
+        }
+        
+        function getCategoryColor(category) {
+            const colors = {
+                'apple': 'rgba(0, 122, 255, 0.2)',
+                'samsung': 'rgba(52, 199, 89, 0.2)',
+                'xiaomi': 'rgba(255, 149, 0, 0.2)',
+                'huawei': 'rgba(255, 59, 48, 0.2)',
+                'other': 'rgba(142, 142, 147, 0.2)'
+            };
+            return colors[category] || 'rgba(142, 142, 147, 0.2)';
+        }
+        
+        function capitalizeFirstLetter(string) {
+            return string.charAt(0).toUpperCase() + string.slice(1);
+        }
+        
+        function showAlert(message, type = 'error') {
+            if (tg && tg.showAlert) {
+                tg.showAlert(message);
+            } else {
+                alert(message);
+            }
+        }
+        
+        // ========== ФУНКЦИИ РАБОТЫ С ДАННЫМИ ==========
+        function loadData() {
+            // Загружаем объявления
+            if (typeof loadAdsFromBackend === 'function') {
+loadAdsFromBackend();
+            } else {
+                // Используем демо данные
+                setTimeout(() => {
+                    renderAds();
+                    renderMyAds();
+                }, 500);
+            }
+        }
+        
+        function loadFromLocalStorage() {
+            try {
+                const savedState = localStorage.getItem('smartmarket_app_state');
+                if (savedState) {
+                    const parsed = JSON.parse(savedState);
+                    appState.ads = parsed.ads || [];
+                    appState.userProfile = parsed.userProfile || {};
+                }
+            } catch (e) {
+                console.error('Error loading from localStorage:', e);
+            }
+        }
+        
+        function saveToLocalStorage() {
+            try {
+                const stateToSave = {
+                    ads: appState.ads,
+                    userProfile: appState.userProfile
+                };
+                localStorage.setItem('smartmarket_app_state', JSON.stringify(stateToSave));
+            } catch (e) {
+                console.error('Error saving to localStorage:', e);
+            }
+        }
+        
+        // ========== ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ ==========
+        function editAd(adId) {
+            const ad = appState.ads.find(a => a.id === adId);
+            if (!ad) {
+                showAlert('Объявление не найдено');
+                return;
+            }
+            
+            // Заполняем форму данными объявления
+            document.getElementById('adTitle').value = ad.title;
+            document.getElementById('adCondition').value = ad.condition;
+            document.getElementById('adPrice').value = ad.price;
+            document.getElementById('adLocation').value = ad.location;
+            document.getElementById('adDescription').value = ad.description;
+            document.getElementById('adCategory').value = ad.category;
+            document.getElementById('adContact').value = ad.contact;
+            
+            // Загружаем фото (в реальном приложении нужно преобразование)
+            appState.selectedPhotos = [];
+            if (ad.images && ad.images.length > 0) {
+                ad.images.forEach((img, index) => {
+                    appState.selectedPhotos.push({
+                        id: photo_${index},
+                        dataUrl: img,
+                        file: null
+                    });
+                });
+            }
+            updatePhotoPreview();
+            
+            // Показываем модальное окно
+            showCreateAdModal();
+            
+            // TODO: Реализовать обновление объявления вместо создания нового
+            showAlert('Режим редактирования. Создастся новое объявление.', 'info');
+        }
+        
+        function deleteAd(adId) {
+            if (confirm('Вы уверены, что хотите удалить это объявление?')) {
+                // Удаляем из состояния
+                const adIndex = appState.ads.findIndex(a => a.id === adId);
+                if (adIndex !== -1) {
+                    appState.ads.splice(adIndex, 1);
+                    saveToLocalStorage();
+                    renderAds();
+                    renderMyAds();
+                    showAlert('Объявление удалено', 'success');
+                }
+            }
+        }
+        
+        function showHelp() {
+            showAlert(`
+SmartMarket - мини-приложение для продажи телефонов
 
-/* PROFILE FUNCTIONS */
-function loadProfile() {
-  // Try to load from localStorage
-  const savedName = localStorage.getItem('smartmarket_name');
-  const savedPhone = localStorage.getItem('smartmarket_phone');
-  
-  if (savedName) name.value = savedName;
-  if (savedPhone) phone.value = savedPhone;
-}
+📱 Основные функции:
+1. Просмотр всех объявлений
+2. Создание своих объявлений
+3. Поиск и фильтрация
+4. Связь с продавцами
+5. Управление профилем
 
-function saveProfile() {
-  const userName = name.value.trim();
-  const userPhone = phone.value.trim();
-  
-  if (!userName) {
-    tg.showAlert("Введите ваше имя");
-    return;
-  }
-  
-  localStorage.setItem('smartmarket_name', userName);
-  localStorage.setItem('smartmarket_phone', userPhone);
-  
-  tg.showAlert("✅ Профиль сохранен!");
-}
+📸 Для добавления фото:
+- Нажмите "Добавить фото"
+- Выберите до 5 изображений
+- Убедитесь, что фото четкие
 
-/* SEARCH FUNCTIONALITY */
-search.addEventListener('input', loadAllAds);
-
-/* AUTO REFRESH */
-setInterval(loadAllAds, 10000); // Refresh every 10 seconds
-
-/* INITIAL LOAD */
-loadAllAds();
-loadProfile();
-</script>
+💡 Советы:
+- Заполняйте все поля подробно
+- Добавляйте качественные фото
+- Указывайте актуальные контакты
+            `, 'info');
+        }
+        
+        function clearAllData() {
+            if (confirm('Вы уверены, что хотите удалить ВСЕ данные? Это действие нельзя отменить.')) {
+                localStorage.clear();
+                appState.ads = [];
+                appState.userProfile = {};
+showAlert('Все данные очищены', 'success');
+                updateProfileUI();
+                renderAds();
+                renderMyAds();
+            }
+        }
+        
+        function logout() {
+            if (tg && tg.close) {
+                tg.close();
+            } else {
+                showAlert('Выход из приложения', 'info');
+            }
+        }
+        
+        // ========== ИНТЕГРАЦИЯ С БЭКЕНДОМ (GOOGLE APPS SCRIPT) ==========
+        async function saveAdToBackend(ad) {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'addAd',
+                        ad: ad
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('Ad saved to backend:', result);
+                return result;
+            } catch (error) {
+                console.error('Error saving ad to backend:', error);
+                // Сохраняем локально при ошибке
+                appState.ads.unshift(ad);
+                saveToLocalStorage();
+                return { success: true, local: true };
+            }
+        }
+        
+        async function loadAdsFromBackend() {
+            try {
+                const response = await fetch(`${API_URL}?action=getAds`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                if (result && Array.isArray(result.ads)) {
+                    appState.ads = result.ads;
+                    renderAds();
+                    renderMyAds();
+                }
+            } catch (error) {
+                console.error('Error loading ads from backend:', error);
+                // Используем демо данные
+                renderAds();
+                renderMyAds();
+            }
+        }
+        
+        // ========== ЭКСПОРТ ФУНКЦИЙ ДЛЯ ГЛОБАЛЬНОГО ДОСТУПА ==========
+        window.showCreateAdModal = showCreateAdModal;
+        window.showViewAdModal = showViewAdModal;
+        window.editAd = editAd;
+        window.deleteAd = deleteAd;
+        window.showHelp = showHelp;
+        window.clearAllData = clearAllData;
+        window.logout = logout;
+        
+        // Инициализация приложения
+        console.log('SmartMarket App Loaded');
+        
+    </script>
 </body>
 </html>
