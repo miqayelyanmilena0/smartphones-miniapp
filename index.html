@@ -1,25 +1,20 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SmartMarket</title>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <style>
 :root {
-  --bg: var(--tg-theme-bg-color, #f4f4f5);
-  --text: var(--tg-theme-text-color, #000);
-  --hint: var(--tg-theme-hint-color, #666);
-  --button: var(--tg-theme-button-color, #2ea6ff);
-  --button-text: var(--tg-theme-button-text-color, #fff);
+  --bg: var(--tg-theme-bg-color, #f2f2f7);
   --card: var(--tg-theme-secondary-bg-color, #fff);
-}
-
-* {
-  box-sizing: border-box;
+  --text: var(--tg-theme-text-color, #000);
+  --hint: var(--tg-theme-hint-color, #8e8e93);
+  --accent: var(--tg-theme-button-color, #007aff);
+  --accent-text: var(--tg-theme-button-text-color, #fff);
 }
 
 body {
@@ -36,130 +31,118 @@ h2 {
 
 input, button {
   width: 100%;
-  padding: 12px;
-  margin-bottom: 10px;
+  padding: 14px;
   border-radius: 12px;
+  border: none;
   font-size: 16px;
+  margin-bottom: 12px;
 }
 
 input {
-  border: 1px solid #ccc;
   background: var(--card);
   color: var(--text);
 }
 
 button {
-  border: none;
-  background: var(--button);
-  color: var(--button-text);
+  background: var(--accent);
+  color: var(--accent-text);
   font-weight: 600;
 }
 
-.card {
-  background: var(--card);
-  border-radius: 14px;
-  padding: 12px;
-  margin-bottom: 10px;
+.tab {
+  display: none;
+}
+
+.tab.active {
+  display: block;
+}
+
+.tabs {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
-.price {
-  font-weight: 600;
+.tabs button {
+  flex: 1;
+  background: var(--card);
+  color: var(--text);
 }
 
-.delete {
-  color: red;
-  font-size: 20px;
-  cursor: pointer;
+.tabs button.active {
+  background: var(--accent);
+  color: var(--accent-text);
 }
 </style>
 </head>
 
 <body>
 
-<h2>📱 Смартфоны в Москве</h2>
+<div class="tabs">
+  <button id="tabProfile" class="active">👤 Профиль</button>
+  <button id="tabAds">📦 Объявления</button>
+</div>
 
-<form id="adForm">
-  <input id="title" placeholder="Модель смартфона" required />
-  <input id="price" type="number" placeholder="Цена ₽" required />
-  <input id="district" placeholder="Район" required />
-  <button type="submit">Разместить</button>
-</form>
+<div id="profile" class="tab active">
+  <h2>Профиль</h2>
 
-<div id="ads"></div>
+  <input id="name" placeholder="ФИО">
+  <input id="phone" placeholder="Телефон">
+  <input id="username" disabled>
+
+  <button onclick="saveProfile()">Сохранить</button>
+</div>
+
+<div id="ads" class="tab">
+  <h2>Мои объявления</h2>
+  <p style="color:var(--hint)">Раздел появится на следующем шаге</p>
+</div>
 
 <script>
-const tg = window.Telegram.WebApp;
+const tg = Telegram.WebApp;
 tg.ready();
 tg.expand();
 
-const USER_ID = tg.initDataUnsafe?.user?.id || "browser";
+const USER = tg.initDataUnsafe.user;
+const USER_ID = USER.id;
+const USERNAME = USER.username || "";
 
 // 🔴 ВСТАВЬ СЮДА URL
-const API_URL = "https://script.google.com/macros/s/AKfycbxVpCmVYLj_V0LGdI8t6wJQ15kxM42H8MkvwWRCTocrS9jXUhOQ3Nvn_6Ayi7xwjEeVuw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwKJgT9fCS4i3P8dSD5kZZqtXVC25v5GFIT6a4BJRGMu1BE6Oi8XEPnRf8qk_mqfzylZQ/exec";
 
-const adsEl = document.getElementById("ads");
-const form = document.getElementById("adForm");
+/* ===== TAB LOGIC ===== */
+tabProfile.onclick = () => switchTab("profile", tabProfile);
+tabAds.onclick = () => switchTab("ads", tabAds);
 
-function loadAds() {
-  fetch(API_URL)
-    .then(r => r.json())
-    .then(data => {
-      adsEl.innerHTML = "";
-      data.forEach(ad => {
-        const div = document.createElement("div");
-        div.className = "card";
-        div.innerHTML = `
-          <div>
-            <div>${ad.title}</div>
-            <div class="price">${ad.price} ₽ · ${ad.district}</div>
-          </div>
-        `;
-
-        if (ad.userId == USER_ID) {
-          const del = document.createElement("span");
-          del.textContent = "❌";
-          del.className = "delete";
-          del.onclick = () => deleteAd(ad.id);
-          div.appendChild(del);
-        }
-
-        adsEl.appendChild(div);
-      });
-    });
+function switchTab(tabId, btn) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
+  document.getElementById(tabId).classList.add("active");
+  btn.classList.add("active");
 }
 
-form.onsubmit = e => {
-  e.preventDefault();
-  fetch(API_URL, {
-    method: "POST",
-    body: new URLSearchParams({
-      title: title.value,
-      price: price.value,
-      district: district.value,
-      userId: USER_ID
-    })
-  }).then(() => {
-    form.reset();
-    loadAds();
+/* ===== LOAD USER ===== */
+fetch(`${API_URL}?action=getUser&userId=${USER_ID}&username=${USERNAME}`)
+  .then(r => r.json())
+  .then(data => {
+    name.value = data.name || "";
+    phone.value = data.phone || "";
+    username.value = "@" + (data.username || "");
   });
-};
 
-function deleteAd(id) {
+/* ===== SAVE USER ===== */
+function saveProfile() {
   fetch(API_URL, {
     method: "POST",
     body: new URLSearchParams({
-      action: "delete",
-      id,
-      userId: USER_ID
+      action: "saveUser",
+      userId: USER_ID,
+      name: name.value,
+      phone: phone.value,
+      username: USERNAME
     })
-  }).then(loadAds);
+  }).then(() => tg.showAlert("Профиль сохранён"));
 }
-
-loadAds();
-setInterval(loadAds, 7000);
 </script>
 
 </body>
