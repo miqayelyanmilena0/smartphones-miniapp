@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SmartMarket</title>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -14,6 +14,7 @@
   --text: var(--tg-theme-text-color, #000000);
   --hint: var(--tg-theme-hint-color, #8e8e93);
   --accent: var(--tg-theme-button-color, #007aff);
+  --accentText: var(--tg-theme-button-text-color, #ffffff);
 }
 
 body {
@@ -26,7 +27,7 @@ body {
 .page {
   display: none;
   padding: 16px;
-  padding-bottom: 80px;
+  padding-bottom: 90px;
 }
 
 .page.active {
@@ -37,37 +38,42 @@ h2 {
   margin-top: 0;
 }
 
-input, button {
+input {
   width: 100%;
   padding: 14px;
-  border-radius: 12px;
+  border-radius: 14px;
   border: none;
   margin-bottom: 12px;
   font-size: 16px;
-}
-
-input {
   background: var(--card);
   color: var(--text);
 }
 
-button {
-  background: var(--accent);
-  color: white;
-  font-weight: 600;
-}
-
-/* карточки */
 .card {
   background: var(--card);
-  border-radius: 14px;
-  padding: 12px;
-  margin-bottom: 10px;
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 12px;
 }
 
 .price {
   color: var(--hint);
-  margin-top: 4px;
+  margin-top: 6px;
+}
+
+.btn {
+  background: var(--accent);
+  color: var(--accentText);
+  border: none;
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-size: 14px;
+}
+
+.btn-outline {
+  background: var(--card);
+  color: var(--accent);
+  border: 1px solid var(--accent);
 }
 
 .delete {
@@ -89,9 +95,9 @@ button {
 
 .tabbar button {
   flex: 1;
+  padding: 14px;
   background: none;
   border: none;
-  padding: 14px;
   font-size: 15px;
   color: var(--hint);
 }
@@ -105,25 +111,33 @@ button {
 
 <body>
 
-<!-- ПРОФИЛЬ -->
-<div id="profile" class="page active">
+<!-- PROFILE -->
+<div id="profile" class="page">
   <h2>Профиль</h2>
   <input id="name" placeholder="ФИО">
   <input id="phone" placeholder="Телефон">
   <input id="username" disabled>
-  <button onclick="saveProfile()">Сохранить</button>
+  <button class="btn" onclick="saveProfile()">Сохранить</button>
 </div>
 
-<!-- МОИ ОБЪЯВЛЕНИЯ -->
+<!-- ALL ADS -->
+<div id="allAds" class="page active">
+  <h2>Объявления</h2>
+  <input id="search" placeholder="Поиск по модели или району">
+  <div id="allAdsList"></div>
+</div>
+
+<!-- MY ADS -->
 <div id="myAds" class="page">
   <h2>Мои объявления</h2>
-  <div id="adsList"></div>
+  <div id="myAdsList"></div>
 </div>
 
 <!-- TAB BAR -->
 <div class="tabbar">
-  <button id="btnProfile" class="active">Профиль</button>
-  <button id="btnAds">Мои объявления</button>
+  <button id="btnAll" class="active">Объявления</button>
+  <button id="btnMy">Мои</button>
+  <button id="btnProfile">Профиль</button>
 </div>
 
 <script>
@@ -138,12 +152,13 @@ const USERNAME = USER.username || "";
 // 🔴 ВСТАВЬ СЮДА URL
 const API_URL = "https://script.google.com/macros/s/AKfycbwKJgT9fCS4i3P8dSD5kZZqtXVC25v5GFIT6a4BJRGMu1BE6Oi8XEPnRf8qk_mqfzylZQ/exec";
 
-/* --- TAB LOGIC --- */
-btnProfile.onclick = () => switchPage("profile", btnProfile);
-btnAds.onclick = () => {
-  switchPage("myAds", btnAds);
+/* --- TABS --- */
+btnAll.onclick = () => switchPage("allAds", btnAll);
+btnMy.onclick = () => {
+  switchPage("myAds", btnMy);
   loadMyAds();
 };
+btnProfile.onclick = () => switchPage("profile", btnProfile);
 
 function switchPage(pageId, btn) {
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
@@ -152,13 +167,13 @@ function switchPage(pageId, btn) {
   btn.classList.add("active");
 }
 
-/* --- LOAD PROFILE --- */
+/* --- PROFILE --- */
 fetch(`${API_URL}?action=getUser&userId=${USER_ID}&username=${USERNAME}`)
   .then(r => r.json())
-  .then(data => {
-    name.value = data.name || "";
-    phone.value = data.phone || "";
-    username.value = "@" + (data.username || "");
+  .then(d => {
+    name.value = d.name || "";
+    phone.value = d.phone || "";
+    username.value = "@" + (d.username || "");
   });
 
 function saveProfile() {
@@ -171,27 +186,54 @@ function saveProfile() {
       phone: phone.value,
       username: USERNAME
     })
-  }).then(() => tg.showAlert("Профиль сохранён"));
+  }).then(() => tg.showAlert("Сохранено"));
 }
 
-/* --- МОИ ОБЪЯВЛЕНИЯ --- */
+/* --- LOAD ALL ADS --- */
+function loadAllAds() {
+  fetch(`${API_URL}?action=getAds`)
+    .then(r => r.json())
+    .then(data => renderAllAds(data));
+}
+
+function renderAllAds(data) {
+  const q = search.value.toLowerCase();
+  allAdsList.innerHTML = "";
+
+  data
+    .filter(ad =>
+      ad.title.toLowerCase().includes(q) ||
+      ad.district.toLowerCase().includes(q)
+    )
+    .forEach(ad => {
+      const div = document.createElement("div");
+      div.className = "card";
+      div.innerHTML = `
+        <strong>${ad.title}</strong>
+        <div class="price">${ad.price} ₽ · ${ad.district}</div>
+      `;
+      allAdsList.appendChild(div);
+    });
+}
+
+search.oninput = loadAllAds;
+
+/* --- MY ADS --- */
 function loadMyAds() {
   fetch(`${API_URL}?action=getAds`)
     .then(r => r.json())
     .then(data => {
-      adsList.innerHTML = "";
-      data
-        .filter(ad => ad.userId == USER_ID)
-        .forEach(ad => {
-          const div = document.createElement("div");
-          div.className = "card";
-          div.innerHTML = `
-            <strong>${ad.title}</strong>
-            <span class="delete" onclick="deleteAd(${ad.id})">Удалить</span>
-            <div class="price">${ad.price} ₽ · ${ad.district}</div>
-          `;
-          adsList.appendChild(div);
-        });
+      myAdsList.innerHTML = "";
+      data.filter(ad => ad.userId == USER_ID).forEach(ad => {
+        const div = document.createElement("div");
+        div.className = "card";
+        div.innerHTML = `
+          <strong>${ad.title}</strong>
+          <span class="delete" onclick="deleteAd(${ad.id})">Удалить</span>
+          <div class="price">${ad.price} ₽ · ${ad.district}</div>
+        `;
+        myAdsList.appendChild(div);
+      });
     });
 }
 
@@ -200,11 +242,14 @@ function deleteAd(id) {
     method: "POST",
     body: new URLSearchParams({
       action: "deleteAd",
-      id: id,
+      id,
       userId: USER_ID
     })
   }).then(loadMyAds);
 }
+
+loadAllAds();
+setInterval(loadAllAds, 7000);
 </script>
 
 </body>
