@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>SmartMarket</title>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -10,19 +10,27 @@
 <style>
 :root {
   --bg: var(--tg-theme-bg-color, #f2f2f7);
-  --card: var(--tg-theme-secondary-bg-color, #fff);
-  --text: var(--tg-theme-text-color, #000);
+  --card: var(--tg-theme-secondary-bg-color, #ffffff);
+  --text: var(--tg-theme-text-color, #000000);
   --hint: var(--tg-theme-hint-color, #8e8e93);
   --accent: var(--tg-theme-button-color, #007aff);
-  --accent-text: var(--tg-theme-button-text-color, #fff);
 }
 
 body {
   margin: 0;
-  padding: 16px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
   background: var(--bg);
   color: var(--text);
+}
+
+.page {
+  display: none;
+  padding: 16px;
+  padding-bottom: 80px;
+}
+
+.page.active {
+  display: block;
 }
 
 h2 {
@@ -34,8 +42,8 @@ input, button {
   padding: 14px;
   border-radius: 12px;
   border: none;
-  font-size: 16px;
   margin-bottom: 12px;
+  font-size: 16px;
 }
 
 input {
@@ -45,57 +53,77 @@ input {
 
 button {
   background: var(--accent);
-  color: var(--accent-text);
+  color: white;
   font-weight: 600;
 }
 
-.tab {
-  display: none;
-}
-
-.tab.active {
-  display: block;
-}
-
-.tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.tabs button {
-  flex: 1;
+/* карточки */
+.card {
   background: var(--card);
-  color: var(--text);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 10px;
 }
 
-.tabs button.active {
-  background: var(--accent);
-  color: var(--accent-text);
+.price {
+  color: var(--hint);
+  margin-top: 4px;
+}
+
+.delete {
+  color: red;
+  float: right;
+  cursor: pointer;
+}
+
+/* bottom bar */
+.tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--card);
+  display: flex;
+  border-top: 1px solid #ddd;
+}
+
+.tabbar button {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 14px;
+  font-size: 15px;
+  color: var(--hint);
+}
+
+.tabbar button.active {
+  color: var(--accent);
+  font-weight: 600;
 }
 </style>
 </head>
 
 <body>
 
-<div class="tabs">
-  <button id="tabProfile" class="active">👤 Профиль</button>
-  <button id="tabAds">📦 Объявления</button>
-</div>
-
-<div id="profile" class="tab active">
+<!-- ПРОФИЛЬ -->
+<div id="profile" class="page active">
   <h2>Профиль</h2>
-
   <input id="name" placeholder="ФИО">
   <input id="phone" placeholder="Телефон">
   <input id="username" disabled>
-
   <button onclick="saveProfile()">Сохранить</button>
 </div>
 
-<div id="ads" class="tab">
+<!-- МОИ ОБЪЯВЛЕНИЯ -->
+<div id="myAds" class="page">
   <h2>Мои объявления</h2>
-  <p style="color:var(--hint)">Раздел появится на следующем шаге</p>
+  <div id="adsList"></div>
+</div>
+
+<!-- TAB BAR -->
+<div class="tabbar">
+  <button id="btnProfile" class="active">Профиль</button>
+  <button id="btnAds">Мои объявления</button>
 </div>
 
 <script>
@@ -110,18 +138,21 @@ const USERNAME = USER.username || "";
 // 🔴 ВСТАВЬ СЮДА URL
 const API_URL = "https://script.google.com/macros/s/AKfycbwKJgT9fCS4i3P8dSD5kZZqtXVC25v5GFIT6a4BJRGMu1BE6Oi8XEPnRf8qk_mqfzylZQ/exec";
 
-/* ===== TAB LOGIC ===== */
-tabProfile.onclick = () => switchTab("profile", tabProfile);
-tabAds.onclick = () => switchTab("ads", tabAds);
+/* --- TAB LOGIC --- */
+btnProfile.onclick = () => switchPage("profile", btnProfile);
+btnAds.onclick = () => {
+  switchPage("myAds", btnAds);
+  loadMyAds();
+};
 
-function switchTab(tabId, btn) {
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
-  document.getElementById(tabId).classList.add("active");
+function switchPage(pageId, btn) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".tabbar button").forEach(b => b.classList.remove("active"));
+  document.getElementById(pageId).classList.add("active");
   btn.classList.add("active");
 }
 
-/* ===== LOAD USER ===== */
+/* --- LOAD PROFILE --- */
 fetch(`${API_URL}?action=getUser&userId=${USER_ID}&username=${USERNAME}`)
   .then(r => r.json())
   .then(data => {
@@ -130,7 +161,6 @@ fetch(`${API_URL}?action=getUser&userId=${USER_ID}&username=${USERNAME}`)
     username.value = "@" + (data.username || "");
   });
 
-/* ===== SAVE USER ===== */
 function saveProfile() {
   fetch(API_URL, {
     method: "POST",
@@ -142,6 +172,38 @@ function saveProfile() {
       username: USERNAME
     })
   }).then(() => tg.showAlert("Профиль сохранён"));
+}
+
+/* --- МОИ ОБЪЯВЛЕНИЯ --- */
+function loadMyAds() {
+  fetch(`${API_URL}?action=getAds`)
+    .then(r => r.json())
+    .then(data => {
+      adsList.innerHTML = "";
+      data
+        .filter(ad => ad.userId == USER_ID)
+        .forEach(ad => {
+          const div = document.createElement("div");
+          div.className = "card";
+          div.innerHTML = `
+            <strong>${ad.title}</strong>
+            <span class="delete" onclick="deleteAd(${ad.id})">Удалить</span>
+            <div class="price">${ad.price} ₽ · ${ad.district}</div>
+          `;
+          adsList.appendChild(div);
+        });
+    });
+}
+
+function deleteAd(id) {
+  fetch(API_URL, {
+    method: "POST",
+    body: new URLSearchParams({
+      action: "deleteAd",
+      id: id,
+      userId: USER_ID
+    })
+  }).then(loadMyAds);
 }
 </script>
 
