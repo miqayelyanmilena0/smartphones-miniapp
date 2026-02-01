@@ -170,7 +170,7 @@ const USER = tg.initDataUnsafe.user;
 const USER_ID = USER.id;
 const USERNAME = USER.username || "";
 
-const API_URL = "https://script.google.com/macros/s/AKfycbwqqtxgz0SLeXdcLUfiU9DOOGxcOsjoBM9iPYy-ZgKF90tNe5q6JtxNylO3hWJLsodZpw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbw9utd8fXpic_My97vB1H5tg_dN5D3pm5De2gKxPjax5yRms8hVRphayUh9ya1gHK0Beg/exec";
 
 /* NAV */
 b1.onclick = ()=>show(allAds,b1);
@@ -189,18 +189,33 @@ modal.onclick = e => { if(e.target===modal) modal.classList.remove('active'); }
 
 /* ADD AD */
 function addAd(){
-  const fd = new FormData();
-  fd.append("action","addAd");
-  fd.append("userId",USER_ID);
-  fd.append("username",USERNAME);
-  fd.append("title",title.value);
-  fd.append("price",price.value);
-  fd.append("district",district.value);
-  fd.append("desc",desc.value);
-  fd.append("photo",photo.files[0]);
+  const file = photo.files[0];
+  const reader = new FileReader();
 
-  fetch(API_URL,{method:"POST",body:fd})
-    .then(()=>{modal.classList.remove('active');loadAllAds();});
+  reader.onload = function(){
+    const base64 = reader.result.split(",")[1];
+
+    fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "addAd",
+        userId: USER_ID,
+        username: USERNAME,
+        title: title.value,
+        price: price.value,
+        district: district.value,
+        desc: desc.value,
+        imageBase64: base64,
+        imageName: file.name
+      })
+    }).then(()=>{
+      modal.classList.remove("active");
+      loadAllAds();
+    });
+  };
+
+  reader.readAsDataURL(file);
 }
 
 /* LOAD ADS */
