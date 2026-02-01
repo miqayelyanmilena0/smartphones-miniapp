@@ -14,12 +14,11 @@
   --text: var(--tg-theme-text-color, #000000);
   --hint: var(--tg-theme-hint-color, #8e8e93);
   --accent: var(--tg-theme-button-color, #007aff);
-  --accentText: var(--tg-theme-button-text-color, #ffffff);
 }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
+  font-family: -apple-system, BlinkMacSystemFont, Roboto;
   background: var(--bg);
   color: var(--text);
 }
@@ -27,18 +26,11 @@ body {
 .page {
   display: none;
   padding: 16px;
-  padding-bottom: 90px;
+  padding-bottom: 100px;
 }
+.page.active { display: block; }
 
-.page.active {
-  display: block;
-}
-
-h2 {
-  margin-top: 0;
-}
-
-input {
+input, textarea {
   width: 100%;
   padding: 14px;
   border-radius: 14px;
@@ -49,40 +41,40 @@ input {
   color: var(--text);
 }
 
+textarea { resize: none; }
+
 .card {
   background: var(--card);
-  border-radius: 16px;
+  border-radius: 18px;
   padding: 14px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
-.price {
-  color: var(--hint);
-  margin-top: 6px;
+.card img {
+  width: 100%;
+  border-radius: 14px;
+  margin-bottom: 10px;
 }
+
+.price { color: var(--hint); margin-top: 6px; }
 
 .btn {
-  background: var(--accent);
-  color: var(--accentText);
+  width: 100%;
+  padding: 14px;
+  border-radius: 16px;
   border: none;
-  border-radius: 14px;
-  padding: 10px 14px;
-  font-size: 14px;
+  font-size: 16px;
+  background: var(--accent);
+  color: white;
 }
 
-.btn-outline {
-  background: var(--card);
+.small-btn {
+  margin-top: 10px;
+  background: none;
   color: var(--accent);
   border: 1px solid var(--accent);
 }
 
-.delete {
-  color: red;
-  float: right;
-  cursor: pointer;
-}
-
-/* bottom bar */
 .tabbar {
   position: fixed;
   bottom: 0;
@@ -106,24 +98,33 @@ input {
   color: var(--accent);
   font-weight: 600;
 }
+
+/* MODAL */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  display: none;
+}
+.modal.active { display: flex; }
+
+.modal-content {
+  margin: auto;
+  background: var(--bg);
+  padding: 20px;
+  width: 90%;
+  border-radius: 20px;
+}
 </style>
 </head>
 
 <body>
 
-<!-- PROFILE -->
-<div id="profile" class="page">
-  <h2>Профиль</h2>
-  <input id="name" placeholder="ФИО">
-  <input id="phone" placeholder="Телефон">
-  <input id="username" disabled>
-  <button class="btn" onclick="saveProfile()">Сохранить</button>
-</div>
-
 <!-- ALL ADS -->
 <div id="allAds" class="page active">
   <h2>Объявления</h2>
-  <input id="search" placeholder="Поиск по модели или району">
+  <input id="search" placeholder="Поиск">
+  <button class="btn small-btn" onclick="openModal()">+ Разместить</button>
   <div id="allAdsList"></div>
 </div>
 
@@ -133,124 +134,103 @@ input {
   <div id="myAdsList"></div>
 </div>
 
+<!-- PROFILE -->
+<div id="profile" class="page">
+  <h2>Профиль</h2>
+  <input id="name" placeholder="ФИО">
+  <input id="phone" placeholder="Телефон">
+  <button class="btn" onclick="saveProfile()">Сохранить</button>
+</div>
+
+<!-- MODAL ADD -->
+<div id="modal" class="modal">
+  <div class="modal-content">
+    <h3>Новое объявление</h3>
+    <input id="title" placeholder="Модель телефона">
+    <input id="price" placeholder="Цена ₽">
+    <input id="district" placeholder="Район">
+    <textarea id="desc" placeholder="Описание"></textarea>
+    <input type="file" id="photo">
+    <button class="btn" onclick="addAd()">Опубликовать</button>
+  </div>
+</div>
+
 <!-- TAB BAR -->
 <div class="tabbar">
-  <button id="btnAll" class="active">Объявления</button>
-  <button id="btnMy">Мои</button>
-  <button id="btnProfile">Профиль</button>
+  <button class="active" id="b1">Объявления</button>
+  <button id="b2">Мои</button>
+  <button id="b3">Профиль</button>
 </div>
 
 <script>
 const tg = Telegram.WebApp;
-tg.ready();
-tg.expand();
+tg.ready(); tg.expand();
 
 const USER = tg.initDataUnsafe.user;
 const USER_ID = USER.id;
 const USERNAME = USER.username || "";
 
-// 🔴 ВСТАВЬ СЮДА URL
 const API_URL = "https://script.google.com/macros/s/AKfycbwKJgT9fCS4i3P8dSD5kZZqtXVC25v5GFIT6a4BJRGMu1BE6Oi8XEPnRf8qk_mqfzylZQ/exec";
 
-/* --- TABS --- */
-btnAll.onclick = () => switchPage("allAds", btnAll);
-btnMy.onclick = () => {
-  switchPage("myAds", btnMy);
-  loadMyAds();
-};
-btnProfile.onclick = () => switchPage("profile", btnProfile);
+/* NAV */
+b1.onclick = ()=>show(allAds,b1);
+b2.onclick = ()=>{show(myAds,b2);loadMyAds();}
+b3.onclick = ()=>show(profile,b3);
 
-function switchPage(pageId, btn) {
-  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-  document.querySelectorAll(".tabbar button").forEach(b => b.classList.remove("active"));
-  document.getElementById(pageId).classList.add("active");
-  btn.classList.add("active");
+function show(p,b){
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.tabbar button').forEach(x=>x.classList.remove('active'));
+  p.classList.add('active'); b.classList.add('active');
 }
 
-/* --- PROFILE --- */
-fetch(`${API_URL}?action=getUser&userId=${USER_ID}&username=${USERNAME}`)
-  .then(r => r.json())
-  .then(d => {
-    name.value = d.name || "";
-    phone.value = d.phone || "";
-    username.value = "@" + (d.username || "");
-  });
+/* MODAL */
+function openModal(){ modal.classList.add('active'); }
+modal.onclick = e => { if(e.target===modal) modal.classList.remove('active'); }
 
-function saveProfile() {
-  fetch(API_URL, {
-    method: "POST",
-    body: new URLSearchParams({
-      action: "saveUser",
-      userId: USER_ID,
-      name: name.value,
-      phone: phone.value,
-      username: USERNAME
-    })
-  }).then(() => tg.showAlert("Сохранено"));
+/* ADD AD */
+function addAd(){
+  const fd = new FormData();
+  fd.append("action","addAd");
+  fd.append("userId",USER_ID);
+  fd.append("username",USERNAME);
+  fd.append("title",title.value);
+  fd.append("price",price.value);
+  fd.append("district",district.value);
+  fd.append("desc",desc.value);
+  fd.append("photo",photo.files[0]);
+
+  fetch(API_URL,{method:"POST",body:fd})
+    .then(()=>{modal.classList.remove('active');loadAllAds();});
 }
 
-/* --- LOAD ALL ADS --- */
-function loadAllAds() {
-  fetch(`${API_URL}?action=getAds`)
-    .then(r => r.json())
-    .then(data => renderAllAds(data));
-}
-
-function renderAllAds(data) {
-  const q = search.value.toLowerCase();
-  allAdsList.innerHTML = "";
-
-  data
-    .filter(ad =>
-      ad.title.toLowerCase().includes(q) ||
-      ad.district.toLowerCase().includes(q)
-    )
-    .forEach(ad => {
-      const div = document.createElement("div");
-      div.className = "card";
-      div.innerHTML = `
-        <strong>${ad.title}</strong>
-        <div class="price">${ad.price} ₽ · ${ad.district}</div>
-      `;
-      allAdsList.appendChild(div);
-    });
-}
-
-search.oninput = loadAllAds;
-
-/* --- MY ADS --- */
-function loadMyAds() {
-  fetch(`${API_URL}?action=getAds`)
-    .then(r => r.json())
-    .then(data => {
-      myAdsList.innerHTML = "";
-      data.filter(ad => ad.userId == USER_ID).forEach(ad => {
-        const div = document.createElement("div");
-        div.className = "card";
-        div.innerHTML = `
-          <strong>${ad.title}</strong>
-          <span class="delete" onclick="deleteAd(${ad.id})">Удалить</span>
-          <div class="price">${ad.price} ₽ · ${ad.district}</div>
-        `;
-        myAdsList.appendChild(div);
+/* LOAD ADS */
+function loadAllAds(){
+  fetch(API_URL+"?action=getAds")
+    .then(r=>r.json())
+    .then(data=>{
+      allAdsList.innerHTML="";
+      data.filter(a=>a.title.toLowerCase().includes(search.value.toLowerCase()))
+      .forEach(ad=>{
+        allAdsList.innerHTML+=`
+          <div class="card">
+            ${ad.imageUrl?`<img src="${ad.imageUrl}">`:``}
+            <strong>${ad.title}</strong>
+            <div>${ad.desc||""}</div>
+            <div class="price">${ad.price} ₽ · ${ad.district}</div>
+            <button class="btn small-btn"
+              onclick="tg.openTelegramLink('https://t.me/${ad.username}')">
+              Написать продавцу
+            </button>
+          </div>`;
       });
     });
 }
 
-function deleteAd(id) {
-  fetch(API_URL, {
-    method: "POST",
-    body: new URLSearchParams({
-      action: "deleteAd",
-      id,
-      userId: USER_ID
-    })
-  }).then(loadMyAds);
-}
+function loadMyAds(){ loadAllAds(); }
 
+search.oninput = loadAllAds;
 loadAllAds();
-setInterval(loadAllAds, 7000);
+setInterval(loadAllAds,7000);
 </script>
-
 </body>
 </html>
