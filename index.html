@@ -3,38 +3,68 @@
 <head>
   <meta charset="UTF-8">
   <title>Смартфоны в Москве</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 16px;
+    }
+    input, button {
+      padding: 8px;
+      margin: 4px 0;
+      width: 100%;
+    }
+    li {
+      margin-bottom: 6px;
+    }
+  </style>
 </head>
 <body>
 
 <h2>Смартфоны в Москве</h2>
-<p>Размести объявление:</p>
 
+<h3>Фильтр</h3>
+<input type="text" id="filterDistrict" placeholder="Район (например, ЦАО)">
+
+<h3>Разместить объявление</h3>
 <form id="adForm">
-  <input type="text" id="title" placeholder="Название смартфона" required><br><br>
-  <input type="number" id="price" placeholder="Цена ₽" required><br><br>
-  <input type="text" id="district" placeholder="Район" required><br><br>
+  <input type="text" id="title" placeholder="Название смартфона" required>
+  <input type="number" id="price" placeholder="Цена ₽" required>
+  <input type="text" id="district" placeholder="Район" required>
   <button type="submit">Разместить</button>
 </form>
 
-<h3>Объявления:</h3>
+<h3>Объявления</h3>
 <ul id="adsList"></ul>
 
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbwgHIvulQdU3PHaAwuitmaCPaigi_dJyZOjgcK_VJYP_vCXb6SDprRR-kEfYGqYCZUm1w/exec";
 
+let allAds = [];
+
+function renderAds() {
+  const filter = document.getElementById("filterDistrict").value.toLowerCase();
+  const list = document.getElementById("adsList");
+  list.innerHTML = "";
+
+  allAds
+    .filter(ad => ad.district.toLowerCase().includes(filter))
+    .forEach(ad => {
+      const li = document.createElement("li");
+      li.textContent = `${ad.title} — ${ad.price} ₽ — ${ad.district}`;
+      list.appendChild(li);
+    });
+}
+
 function fetchAds() {
   fetch(API_URL)
     .then(res => res.json())
     .then(data => {
-      const list = document.getElementById("adsList");
-      list.innerHTML = "";
-      data.forEach(ad => {
-        const li = document.createElement("li");
-        li.textContent = `${ad.title} — ${ad.price} ₽ — ${ad.district}`;
-        list.appendChild(li);
-      });
+      allAds = data;
+      renderAds();
     });
 }
+
+document.getElementById("filterDistrict").addEventListener("input", renderAds);
 
 document.getElementById("adForm").addEventListener("submit", function(e) {
   e.preventDefault();
