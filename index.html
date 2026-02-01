@@ -17,11 +17,17 @@
       color: red;
       font-weight: bold;
     }
+    .hint {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 8px;
+    }
   </style>
 </head>
 <body>
 
 <h2>Смартфоны в Москве</h2>
+<div class="hint">Обновляется автоматически каждые 10 секунд</div>
 
 <input type="text" id="filterDistrict" placeholder="Фильтр по району">
 
@@ -38,7 +44,9 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbxaqYqrjXfJAM_cIzkqaMs2lrMpkkm1QjdWegaLejk81M-ecrAV8g2XEljy1KeFtDfq9w/exec";
 
 let allAds = [];
+let autoRefreshTimer = null;
 
+// --- РЕНДЕР ---
 function renderAds() {
   const filter = document.getElementById("filterDistrict").value.toLowerCase();
   const list = document.getElementById("adsList");
@@ -63,6 +71,7 @@ function renderAds() {
     });
 }
 
+// --- ЗАГРУЗКА ---
 function fetchAds() {
   fetch(API_URL)
     .then(res => res.json())
@@ -72,6 +81,7 @@ function fetchAds() {
     });
 }
 
+// --- УДАЛЕНИЕ ---
 function deleteAd(id) {
   fetch(API_URL, {
     method: "POST",
@@ -83,9 +93,11 @@ function deleteAd(id) {
   .then(() => fetchAds());
 }
 
+// --- ФИЛЬТР ---
 document.getElementById("filterDistrict")
   .addEventListener("input", renderAds);
 
+// --- ДОБАВЛЕНИЕ ---
 document.getElementById("adForm")
   .addEventListener("submit", function(e) {
     e.preventDefault();
@@ -104,6 +116,13 @@ document.getElementById("adForm")
     });
   });
 
+// --- АВТООБНОВЛЕНИЕ ---
+function startAutoRefresh() {
+  if (autoRefreshTimer) return;
+  autoRefreshTimer = setInterval(fetchAds, 10000);
+}
+
+startAutoRefresh();
 fetchAds();
 </script>
 
