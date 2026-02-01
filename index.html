@@ -3,103 +3,101 @@
 <head>
   <meta charset="UTF-8">
   <title>Смартфоны в Москве</title>
+
+  <!-- Telegram WebApp -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
   <style>
-    body { font-family: Arial; padding: 16px; }
-    input, button { padding: 8px; margin: 4px 0; width: 100%; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 16px;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 8px;
+      margin: 6px 0;
+    }
+
+    ul {
+      padding: 0;
+    }
+
     li {
+      list-style: none;
+      border: 1px solid #ddd;
+      padding: 8px;
       margin-bottom: 6px;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
+
     .delete {
       cursor: pointer;
       color: red;
       font-weight: bold;
     }
-    .hint {
-      font-size: 12px;
-      color: #666;
-      margin-bottom: 8px;
-    }
   </style>
 </head>
 <body>
 
-<h2>Смартфоны в Москве</h2>
-<div class="hint">Обновляется автоматически каждые 10 секунд</div>
+  <h2>📱 Смартфоны в Москве</h2>
 
-<input type="text" id="filterDistrict" placeholder="Фильтр по району">
+  <p>Размести объявление:</p>
 
-<form id="adForm">
-  <input type="text" id="title" placeholder="Название" required>
-  <input type="number" id="price" placeholder="Цена ₽" required>
-  <input type="text" id="district" placeholder="Район" required>
-  <button type="submit">Разместить</button>
-</form>
+  <form id="adForm">
+    <input type="text" id="title" placeholder="Модель смартфона" required>
+    <input type="number" id="price" placeholder="Цена ₽" required>
+    <input type="text" id="district" placeholder="Район" required>
+    <button type="submit">Разместить</button>
+  </form>
 
-<ul id="adsList"></ul>
+  <h3>Объявления:</h3>
+  <ul id="adsList"></ul>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbxaqYqrjXfJAM_cIzkqaMs2lrMpkkm1QjdWegaLejk81M-ecrAV8g2XEljy1KeFtDfq9w/exec";
+  // --- TELEGRAM ---
+  const tg = window.Telegram?.WebApp;
+  if (tg) {
+    tg.ready();
+    tg.expand();
+  }
 
-let allAds = [];
-let autoRefreshTimer = null;
+  const CURRENT_USER_ID = tg?.initDataUnsafe?.user?.id || "browser";
 
-// --- РЕНДЕР ---
-function renderAds() {
-  const filter = document.getElementById("filterDistrict").value.toLowerCase();
-  const list = document.getElementById("adsList");
-  list.innerHTML = "";
+  // 🔴 ВСТАВЬ СЮДА СВОЙ URL APPS SCRIPT
+  const API_URL = "https://script.google.com/macros/s/AKfycbxVpCmVYLj_V0LGdI8t6wJQ15kxM42H8MkvwWRCTocrS9jXUhOQ3Nvn_6Ayi7xwjEeVuw/exec";
 
-  allAds
-    .filter(ad => ad.district.toLowerCase().includes(filter))
-    .forEach(ad => {
-      const li = document.createElement("li");
+  const adForm = document.getElementById("adForm");
+  const adsList = document.getElementById("adsList");
 
-      const text = document.createElement("span");
-      text.textContent = `${ad.title} — ${ad.price} ₽ — ${ad.district}`;
+  // --- ЗАГРУЗКА ОБЪЯВЛЕНИЙ ---
+  function fetchAds() {
+    fetch(API_URL)
+      .then(res => res.json())
+      .then(data => {
+        adsList.innerHTML = "";
 
-      const del = document.createElement("span");
-      del.textContent = "❌";
-      del.className = "delete";
-      del.addEventListener("click", () => deleteAd(ad.id));
+        data.forEach(ad => {
+          const li = document.createElement("li");
+          li.textContent = `${ad.title} — ${ad.price} ₽ — ${ad.district}`;
 
-      li.appendChild(text);
-      li.appendChild(del);
-      list.appendChild(li);
-    });
-}
+          if (ad.userId == CURRENT_USER_ID) {
+            const del = document.createElement("span");
+            del.textContent = " ❌";
+            del.className = "delete";
+            del.onclick = () => deleteAd(ad.id);
+            li.appendChild(del);
+          }
 
-// --- ЗАГРУЗКА ---
-function fetchAds() {
-  fetch(API_URL)
-    .then(res => res.json())
-    .then(data => {
-      allAds = data;
-      renderAds();
-    });
-}
+          adsList.appendChild(li);
+        });
+      });
+  }
 
-// --- УДАЛЕНИЕ ---
-function deleteAd(id) {
-  fetch(API_URL, {
-    method: "POST",
-    body: new URLSearchParams({
-      action: "delete",
-      id: id
-    })
-  })
-  .then(() => fetchAds());
-}
-
-// --- ФИЛЬТР ---
-document.getElementById("filterDistrict")
-  .addEventListener("input", renderAds);
-
-// --- ДОБАВЛЕНИЕ ---
-document.getElementById("adForm")
-  .addEventListener("submit", function(e) {
+  // --- ДОБАВЛЕНИЕ ---
+  adForm.addEventListener("submit", function(e) {
     e.preventDefault();
 
     fetch(API_URL, {
@@ -107,23 +105,29 @@ document.getElementById("adForm")
       body: new URLSearchParams({
         title: title.value,
         price: price.value,
-        district: district.value
+        district: district.value,
+        userId: CURRENT_USER_ID
       })
-    })
-    .then(() => {
-      this.reset();
+    }).then(() => {
+      adForm.reset();
       fetchAds();
     });
   });
 
-// --- АВТООБНОВЛЕНИЕ ---
-function startAutoRefresh() {
-  if (autoRefreshTimer) return;
-  autoRefreshTimer = setInterval(fetchAds, 10000);
-}
+  // --- УДАЛЕНИЕ ---
+  function deleteAd(id) {
+    fetch(API_URL, {
+      method: "POST",
+      body: new URLSearchParams({
+        action: "delete",
+        id: id,
+        userId: CURRENT_USER_ID
+      })
+    }).then(() => fetchAds());
+  }
 
-startAutoRefresh();
-fetchAds();
+  // старт
+  fetchAds();
 </script>
 
 </body>
