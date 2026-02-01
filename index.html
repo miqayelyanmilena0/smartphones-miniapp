@@ -14,14 +14,6 @@
   --text: var(--tg-theme-text-color, #000000);
   --hint: var(--tg-theme-hint-color, #8e8e93);
   --accent: var(--tg-theme-button-color, #007aff);
-.error-message {
-  background: #ffebee;
-  padding: 12px;
-  border-radius: 12px;
-  margin: 10px 0;
-  color: #c62828;
-  display: none;
-  font-size: 14px;
 }
 
 body {
@@ -123,6 +115,72 @@ textarea { resize: none; }
   width: 90%;
   border-radius: 20px;
 }
+
+/* LOADING */
+.loading {
+  text-align: center;
+  padding: 20px;
+  display: none;
+}
+
+.loading.active {
+  display: block;
+}
+
+/* ERROR */
+.error-message {
+  background: #ffebee;
+  padding: 12px;
+  border-radius: 12px;
+  margin: 10px 0;
+  color: #c62828;
+  display: none;
+  font-size: 14px;
+}
+
+/* FILE INPUT STYLING */
+.file-input-container {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.file-input-container input[type="file"] {
+  opacity: 0;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.file-input-label {
+  display: block;
+  padding: 14px;
+  background: var(--card);
+  border-radius: 14px;
+  text-align: center;
+  color: var(--hint);
+  border: 1px dashed var(--hint);
+}
+
+.file-input-label.has-file {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* PHOTO PREVIEW */
+.photo-preview {
+  display: none;
+  margin-bottom: 12px;
+}
+
+.photo-preview.active {
+  display: block;
+}
+
+.photo-preview img {
+  width: 100%;
+  border-radius: 14px;
+}
 </style>
 </head>
 
@@ -154,17 +212,35 @@ textarea { resize: none; }
 <div id="modal" class="modal">
   <div class="modal-content">
     <h3>Новое объявление</h3>
+    
     <input id="title" placeholder="Модель телефона">
     <input id="price" placeholder="Цена ₽">
     <input id="district" placeholder="Район">
     <textarea id="desc" placeholder="Описание"></textarea>
-<div id="loading" style="display:none; text-align:center; padding:10px;">
-  Загружаем фото...
+    
+    <!-- Photo Preview -->
+    <div id="photoPreview" class="photo-preview">
+      <img id="previewImage" src="" alt="Preview">
+    </div>
+    
+    <!-- File Input with Custom Styling -->
+    <div class="file-input-container">
+      <input type="file" id="photo" accept="image/*" onchange="handlePhotoSelect(event)">
+      <label for="photo" id="fileLabel" class="file-input-label">
+        📷 Добавить фото
+      </label>
+    </div>
+    
+    <!-- Loading and Error Messages -->
+    <div id="loading" class="loading">
+      Загружаем фото...
+    </div>
+    
+    <div id="error" class="error-message"></div>
+    
+    <button class="btn" onclick="addAd()">Опубликовать</button>
+  </div>
 </div>
-<div id="error" class="error-message" style="display:none;"></div>
-
-<input type="file" id="photo">
-<button class="btn" onclick="addAd()">Опубликовать</button>
 
 <!-- TAB BAR -->
 <div class="tabbar">
@@ -181,91 +257,86 @@ const USER = tg.initDataUnsafe.user;
 const USER_ID = USER.id;
 const USERNAME = USER.username || "";
 
-const API_URL = "https://script.google.com/macros/s/AKfycby0FNr_ywbVIQHBvjGiHTlDn40YvLSswBuoZyxrRHWM97SYWwlTCwPTMpVsn7C7mrIfWA/exec";
+// ЗАМЕНИТЕ НА ВАШ URL Apps Script
+const API_URL = "https://script.google.com/macros/s/AKfycbw9utd8fXpic_My97vB1H5tg_dN5D3pm5De2gKxPjax5yRms8hVRphayUh9ya1gHK0Beg/exec";
 
-/* NAV */
-b1.onclick = ()=>show(allAds,b1);
-b2.onclick = ()=>{show(myAds,b2);loadMyAds();}
-b3.onclick = ()=>show(profile,b3);
+/* NAVIGATION */
+b1.onclick = () => {
+  show(allAds, b1);
+  loadAllAds();
+};
 
-function show(p,b){
-  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
-  document.querySelectorAll('.tabbar button').forEach(x=>x.classList.remove('active'));
-  p.classList.add('active'); b.classList.add('active');
+b2.onclick = () => {
+  show(myAds, b2);
+  loadMyAds();
+};
+
+b3.onclick = () => {
+  show(profile, b3);
+  loadProfile();
+};
+
+function show(page, button) {
+  document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.tabbar button').forEach(x => x.classList.remove('active'));
+  page.classList.add('active');
+  button.classList.add('active');
 }
 
-/* MODAL */
-function openModal(){ modal.classList.add('active'); }
-modal.onclick = e => { if(e.target===modal) modal.classList.remove('active'); }
+/* MODAL FUNCTIONS */
+function openModal() {
+  modal.classList.add('active');
+  clearForm();
+}
 
-/* ADD AD */
-async function addAd() {
-  const file = photo.files[0];
+function closeModal() {
+  modal.classList.remove('active');
+  clearForm();
+}
+
+function clearForm() {
+  title.value = "";
+  price.value = "";
+  district.value = "";
+  desc.value = "";
+  photo.value = "";
+  fileLabel.textContent = "📷 Добавить фото";
+  fileLabel.classList.remove("has-file");
+  photoPreview.classList.remove("active");
+  hideError();
+}
+
+modal.onclick = function(e) {
+  if (e.target === modal) {
+    closeModal();
+  }
+};
+
+/* PHOTO HANDLING */
+function handlePhotoSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
   
-  if (!file) {
-    tg.showAlert("Добавьте фото!");
+  if (file.size > 5 * 1024 * 1024) { // 5MB limit
+    showError("Файл слишком большой. Максимум 5MB");
+    photo.value = "";
     return;
   }
   
-  // Показываем загрузку
-  const btn = document.querySelector('#modal .btn');
-  const originalText = btn.textContent;
-  btn.textContent = "Загружаем...";
-  btn.disabled = true;
+  // Update label
+  fileLabel.textContent = `📷 ${file.name}`;
+  fileLabel.classList.add("has-file");
   
-  try {
-    // Читаем файл как Base64
-    const base64 = await fileToBase64(file);
-    
-    // Отправляем на сервер
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "addAd",
-        userId: USER_ID,
-        username: USERNAME,
-        title: title.value,
-        price: price.value,
-        district: district.value,
-        desc: desc.value,
-        imageBase64: base64,
-        imageName: file.name
-      })
-    });
-    
-    const result = await response.json();
-    
-    if (result.success) {
-      // Очищаем форму
-      title.value = "";
-      price.value = "";
-      district.value = "";
-      desc.value = "";
-      photo.value = "";
-      
-      // Закрываем модальное окно
-      modal.classList.remove("active");
-      
-      // Обновляем список
-      loadAllAds();
-      
-      // Показываем уведомление
-      tg.showAlert("Объявление успешно добавлено!");
-    } else {
-      throw new Error(result.error || "Ошибка при добавлении");
-    }
-  } catch (error) {
-    console.error("Error adding ad:", error);
-    tg.showAlert("Ошибка: " + error.message);
-  } finally {
-    // Восстанавливаем кнопку
-    btn.textContent = originalText;
-    btn.disabled = false;
-  }
+  // Show preview
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    previewImage.src = e.target.result;
+    photoPreview.classList.add("active");
+  };
+  reader.readAsDataURL(file);
 }
 
-/* Helper: Convert File to Base64 */
+/* FILE TO BASE64 */
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -274,34 +345,212 @@ function fileToBase64(file) {
     reader.onerror = reject;
   });
 }
-/* LOAD ADS */
-function loadAllAds(){
-  fetch(API_URL+"?action=getAds")
-    .then(r=>r.json())
-    .then(data=>{
-      allAdsList.innerHTML="";
-      data.filter(a=>a.title.toLowerCase().includes(search.value.toLowerCase()))
-      .forEach(ad=>{
-        allAdsList.innerHTML+=`
-          <div class="card">
-            ${ad.imageUrl?`<img src="${ad.imageUrl}">`:``}
-            <strong>${ad.title}</strong>
-            <div>${ad.desc||""}</div>
-            <div class="price">${ad.price} ₽ · ${ad.district}</div>
-            <button class="btn small-btn"
-              onclick="tg.openTelegramLink('https://t.me/${ad.username}')">
+
+/* ERROR HANDLING */
+function showError(message) {
+  error.textContent = message;
+  error.style.display = "block";
+}
+
+function hideError() {
+  error.style.display = "none";
+}
+
+/* ADD AD FUNCTION */
+async function addAd() {
+  const file = photo.files[0];
+  
+  // Validation
+  if (!title.value.trim()) {
+    showError("Введите модель телефона");
+    return;
+  }
+  
+  if (!price.value.trim()) {
+    showError("Введите цену");
+    return;
+  }
+  
+  if (!file) {
+    showError("Добавьте фото телефона");
+    return;
+  }
+  
+  // Show loading
+  const btn = document.querySelector('#modal .btn');
+  const originalText = btn.textContent;
+  btn.textContent = "Загружаем...";
+  btn.disabled = true;
+  loading.style.display = "block";
+  hideError();
+  
+  try {
+    // Convert to Base64
+    const base64 = await fileToBase64(file);
+    
+    // Send to server
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "addAd",
+        userId: USER_ID,
+        username: USERNAME,
+        title: title.value.trim(),
+        price: price.value.trim(),
+        district: district.value.trim(),
+        desc: desc.value.trim(),
+        imageBase64: base64,
+        imageName: file.name
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      // Success
+      tg.showAlert("✅ Объявление успешно добавлено!");
+      closeModal();
+      loadAllAds();
+      loadMyAds();
+    } else {
+      throw new Error(result.error || "Ошибка сервера");
+    }
+  } catch (error) {
+    console.error("Error adding ad:", error);
+    showError("Ошибка: " + error.message);
+  } finally {
+    // Restore button
+    btn.textContent = originalText;
+    btn.disabled = false;
+    loading.style.display = "none";
+  }
+}
+
+/* LOAD ALL ADS */
+function loadAllAds() {
+  fetch(https://script.google.com/macros/s/AKfycbzbrLHlGEyzXjq7I2v44c9QMUHuQAVeaXI4TyM9FdSW7H4pCGE1jZ3vBhj7JLxpXkhGuA/exec + "?action=getAds")
+    .then(r => r.json())
+    .then(data => {
+      if (!Array.isArray(data)) {
+        console.error("Invalid data format:", data);
+        return;
+      }
+      
+      const searchTerm = search.value.toLowerCase();
+      allAdsList.innerHTML = "";
+      
+      data
+        .filter(ad => 
+          ad.title && 
+          ad.title.toLowerCase().includes(searchTerm)
+        )
+        .forEach(ad => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          
+          let imageHtml = '';
+          if (ad.imageUrl) {
+            imageHtml = `<img src="${ad.imageUrl}" alt="${ad.title}" onerror="this.style.display='none'">`;
+          }
+          
+          card.innerHTML = `
+            ${imageHtml}
+            <strong>${ad.title || 'Без названия'}</strong>
+            <div>${ad.desc || ''}</div>
+            <div class="price">${ad.price || '0'} ₽ · ${ad.district || 'Не указан'}</div>
+            <button class="btn small-btn" 
+              onclick="tg.openTelegramLink('https://t.me/${ad.username || 'username'}')">
               Написать продавцу
             </button>
-          </div>`;
-      });
+          `;
+          
+          allAdsList.appendChild(card);
+        });
+    })
+    .catch(err => {
+      console.error("Error loading ads:", err);
+      allAdsList.innerHTML = '<div style="text-align:center;color:var(--hint);">Ошибка загрузки</div>';
     });
 }
 
-function loadMyAds(){ loadAllAds(); }
+/* LOAD MY ADS */
+function loadMyAds() {
+  fetch(API_URL + "?action=getAds")
+    .then(r => r.json())
+    .then(data => {
+      if (!Array.isArray(data)) return;
+      
+      myAdsList.innerHTML = "";
+      
+      const myAds = data.filter(ad => ad.userId == USER_ID);
+      
+      if (myAds.length === 0) {
+        myAdsList.innerHTML = '<div style="text-align:center;color:var(--hint);">У вас нет объявлений</div>';
+        return;
+      }
+      
+      myAds.forEach(ad => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        
+        let imageHtml = '';
+        if (ad.imageUrl) {
+          imageHtml = `<img src="${ad.imageUrl}" alt="${ad.title}" onerror="this.style.display='none'">`;
+        }
+        
+        card.innerHTML = `
+          ${imageHtml}
+          <strong>${ad.title || 'Без названия'}</strong>
+          <div>${ad.desc || ''}</div>
+          <div class="price">${ad.price || '0'} ₽ · ${ad.district || 'Не указан'}</div>
+          <button class="btn small-btn" onclick="tg.showAlert('Это ваше объявление')">
+            Ваше объявление
+          </button>
+        `;
+        
+        myAdsList.appendChild(card);
+      });
+    })
+    .catch(err => {
+      console.error("Error loading my ads:", err);
+    });
+}
 
-search.oninput = loadAllAds;
+/* PROFILE FUNCTIONS */
+function loadProfile() {
+  // Try to load from localStorage
+  const savedName = localStorage.getItem('smartmarket_name');
+  const savedPhone = localStorage.getItem('smartmarket_phone');
+  
+  if (savedName) name.value = savedName;
+  if (savedPhone) phone.value = savedPhone;
+}
+
+function saveProfile() {
+  const userName = name.value.trim();
+  const userPhone = phone.value.trim();
+  
+  if (!userName) {
+    tg.showAlert("Введите ваше имя");
+    return;
+  }
+  
+  localStorage.setItem('smartmarket_name', userName);
+  localStorage.setItem('smartmarket_phone', userPhone);
+  
+  tg.showAlert("✅ Профиль сохранен!");
+}
+
+/* SEARCH FUNCTIONALITY */
+search.addEventListener('input', loadAllAds);
+
+/* AUTO REFRESH */
+setInterval(loadAllAds, 10000); // Refresh every 10 seconds
+
+/* INITIAL LOAD */
 loadAllAds();
-setInterval(loadAllAds,7000);
+loadProfile();
 </script>
 </body>
 </html>
