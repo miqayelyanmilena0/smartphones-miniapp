@@ -4,36 +4,25 @@
   <meta charset="UTF-8">
   <title>Смартфоны в Москве</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 16px;
-    }
-    input, button {
-      padding: 8px;
-      margin: 4px 0;
-      width: 100%;
-    }
-    li {
-      margin-bottom: 6px;
-    }
+    body { font-family: Arial; padding: 16px; }
+    input, button { padding: 8px; margin: 4px 0; width: 100%; }
+    li { margin-bottom: 6px; display: flex; justify-content: space-between; }
+    .delete { cursor: pointer; color: red; margin-left: 10px; }
   </style>
 </head>
 <body>
 
 <h2>Смартфоны в Москве</h2>
 
-<h3>Фильтр</h3>
-<input type="text" id="filterDistrict" placeholder="Район (например, ЦАО)">
+<input type="text" id="filterDistrict" placeholder="Фильтр по району">
 
-<h3>Разместить объявление</h3>
 <form id="adForm">
-  <input type="text" id="title" placeholder="Название смартфона" required>
+  <input type="text" id="title" placeholder="Название" required>
   <input type="number" id="price" placeholder="Цена ₽" required>
   <input type="text" id="district" placeholder="Район" required>
   <button type="submit">Разместить</button>
 </form>
 
-<h3>Объявления</h3>
 <ul id="adsList"></ul>
 
 <script>
@@ -50,7 +39,10 @@ function renderAds() {
     .filter(ad => ad.district.toLowerCase().includes(filter))
     .forEach(ad => {
       const li = document.createElement("li");
-      li.textContent = `${ad.title} — ${ad.price} ₽ — ${ad.district}`;
+      li.innerHTML = `
+        <span>${ad.title} — ${ad.price} ₽ — ${ad.district}</span>
+        <span class="delete" onclick="deleteAd(${ad.id})">❌</span>
+      `;
       list.appendChild(li);
     });
 }
@@ -64,18 +56,29 @@ function fetchAds() {
     });
 }
 
+function deleteAd(id) {
+  fetch(API_URL, {
+    method: "POST",
+    body: new URLSearchParams({
+      action: "delete",
+      id: id
+    })
+  })
+  .then(() => fetchAds());
+}
+
 document.getElementById("filterDistrict").addEventListener("input", renderAds);
 
 document.getElementById("adForm").addEventListener("submit", function(e) {
   e.preventDefault();
 
-  const title = document.getElementById("title").value;
-  const price = document.getElementById("price").value;
-  const district = document.getElementById("district").value;
-
   fetch(API_URL, {
     method: "POST",
-    body: new URLSearchParams({ title, price, district })
+    body: new URLSearchParams({
+      title: title.value,
+      price: price.value,
+      district: district.value
+    })
   })
   .then(() => {
     this.reset();
