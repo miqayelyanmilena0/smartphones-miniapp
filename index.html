@@ -791,25 +791,6 @@ publishBtn.onclick = () => {
     publishBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Опубликовать';
   });
 };
-
-  const reader = new FileReader();
-  reader.onload = () => {
-    const base64 = reader.result.split(",")[1];
-
-    fetch(API_URL, {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({
-        action: "addAd",
-        userId: USER_ID,
-        username: USERNAME,
-        title: title.value,
-        price: price.value,
-        district: district.value,
-        desc: desc.value,
-        imageBase64: base64,
-        imageName: file.name
-      })
     }).then(() => {
       modal.classList.remove("active");
       loadAllAds();
