@@ -688,7 +688,7 @@ const USER = tg.initDataUnsafe.user;
 const USER_ID = USER?.id || 0;
 const USERNAME = USER?.username || "";
 
-const API_URL = "https://script.google.com/macros/s/AKfycbyN56_mRAB9xp4gk6UAgkmMNQ2FuoxaeAo9WVfUnfB-OcsLxH0d0fK6XKKeRodr-SuF-Q/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyzvJURlxAaSXEjw8TA4GltadcXnatMtriAQzgENX4ZOGH6bKJ5sN38ExaZEIQvVRB9kA/exec";
 
 /* NAV */
 tabAll.onclick = () => {
@@ -759,19 +759,38 @@ photo.onchange = function(e) {
 /* ADD AD */
 publishBtn.onclick = () => {
   const file = photo.files[0];
-  if (!file) {
-    alert('Пожалуйста, добавьте фотографию товара');
+
+  if (!file || !title.value.trim()) {
+    alert("Заполните название и добавьте фото");
     return;
   }
 
-  if (!title.value.trim()) {
-    alert('Пожалуйста, укажите название товара');
-    return;
-  }
-
-  // Show loading
-  publishBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загружается...';
   publishBtn.disabled = true;
+  publishBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загрузка...';
+
+  const formData = new FormData();
+  formData.append("action", "addAd");
+  formData.append("userId", USER_ID);
+  formData.append("username", USERNAME);
+  formData.append("title", title.value);
+  formData.append("price", price.value);
+  formData.append("district", district.value);
+  formData.append("desc", desc.value);
+  formData.append("photo", file);
+
+  fetch(API_URL, {
+    method: "POST",
+    body: formData
+  })
+  .then(() => {
+    modal.classList.remove("active");
+    loadAllAds();
+  })
+  .finally(() => {
+    publishBtn.disabled = false;
+    publishBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Опубликовать';
+  });
+};
 
   const reader = new FileReader();
   reader.onload = () => {
@@ -935,17 +954,15 @@ function loadMyAds(){
 }
 
 function deleteAd(adId) {
+  const formData = new FormData();
+  formData.append("action", "deleteAd");
+  formData.append("adId", adId);
+  formData.append("userId", USER_ID);
+
   fetch(API_URL, {
     method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({
-      action: "deleteAd",
-      adId: adId,
-      userId: USER_ID
-    })
-  }).then(() => {
-    loadMyAds();
-  });
+    body: formData
+  }).then(() => loadMyAds());
 }
 
 // Search functionality
